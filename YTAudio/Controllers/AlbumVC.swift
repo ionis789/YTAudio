@@ -7,10 +7,11 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+class AlbumVC: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        self.view.backgroundColor = .black
         // Do any additional setup after loading the view.
     }
 
