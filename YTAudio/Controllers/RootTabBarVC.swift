@@ -12,11 +12,11 @@ class RootTabBarVC: UITabBarController {
         super.viewDidLoad()
 
         // Set the color of the tab bar items (both selected and unselected)
-        UITabBar.appearance().tintColor = .red // For selected items
+        UITabBar.appearance().tintColor = .myRed // For selected items
         UITabBar.appearance().unselectedItemTintColor = .gray // For unselected items
 
 
-        let albumVC = AlbumVC()
+        let albumVC = AlbumsVC()
         let ImportAudioVC = ImportAudioVC()
         let settingsVC = SettingsVC()
 
