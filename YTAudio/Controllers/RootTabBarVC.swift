@@ -8,6 +8,7 @@
 import UIKit
 
 class RootTabBarVC: UITabBarController {
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -15,12 +16,11 @@ class RootTabBarVC: UITabBarController {
         UITabBar.appearance().tintColor = .myRed // For selected items
         UITabBar.appearance().unselectedItemTintColor = .gray // For unselected items
 
-
-        let albumVC = AlbumsVC()
+        let albumVC = PlayListVC(albums: PlayListManager.getPlayList())
         let ImportAudioVC = ImportAudioVC()
         let settingsVC = SettingsVC()
 
-        albumVC.tabBarItem = UITabBarItem(title: "Albums", image: UIImage(systemName: "music.note.list"), tag: 0)
+        albumVC.tabBarItem = UITabBarItem(title: "Albums", image: UIImage(systemName: "rectangle.stack"), tag: 0)
         ImportAudioVC.tabBarItem = UITabBarItem(title: "Import", image: UIImage(systemName: "plus"), tag: 1)
         settingsVC.tabBarItem = UITabBarItem(title: "Settings", image: UIImage(systemName: "gearshape"), tag: 2)
 

@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct SongModel {
+struct AudioModel {
     let title: String
     let artist: String
     let duration: TimeInterval

@@ -9,12 +9,14 @@ import UIKit
 
 class AlbumCell: UITableViewCell {
 
-    //MARK: Init AlbumCell with AlbumModel values
-    var Album: AlbumModel? {
+    //MARK: Init AlbumCell with asociated AlbumModel
+    var album: AlbumModel? {
         didSet {
-            albumName.text = Album?.title
-            albumSongsCount.text = "\(Album?.songs.count ?? 0) Songs"
-            albumCover.image = Album?.cover ?? UIImage(systemName: "music.quarternote.3")
+            if let album = self.album {
+                albumName.text = album.title
+                albumSongsCount.text = "\(album.songs.count) Songs"
+                albumCover.image = album.cover ?? UIImage(named: "emptyAlbum")
+            }
         }
     }
 
@@ -25,23 +27,32 @@ class AlbumCell: UITableViewCell {
         v.translatesAutoresizingMaskIntoConstraints = false
         v.contentMode = .scaleAspectFill
         v.clipsToBounds = true
-        v.layer.cornerRadius = 10
         return v
     }()
 
     private lazy var albumName: UILabel = {
         let v = UILabel()
-        v.font = UIFont.systemFont(ofSize: 16, weight: .medium)
-        v.textColor = .gray
-        v.numberOfLines = 0
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        v.textColor = .white
         return v
     }()
 
     private lazy var albumSongsCount: UILabel = {
         let v = UILabel()
-        v.font = UIFont.systemFont(ofSize: 16, weight: .medium)
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
         v.textColor = .gray
-        v.numberOfLines = 0
+        return v
+    }()
+    private lazy var albumInfoStack: UIStackView = {
+        let v = UIStackView(arrangedSubviews: [albumName, albumSongsCount])
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.axis = .vertical
+        v.alignment = .leading
+        v.distribution = .fillEqually
+        v.spacing = 8
+        return v
     }()
 
     //MARK: Init cell, here comes the identifier `albumCell`
@@ -54,9 +65,8 @@ class AlbumCell: UITableViewCell {
     }
     //MARK: Functions
     private func setupView() {
-        ///Closure with trail notation
-        [albumCover, albumName, albumSongsCount].forEach { addSubview($0) }
-
+        ///Closure with trail notation (good practice)
+        [albumCover, albumInfoStack].forEach { contentView.addSubview($0) }
         setupConstraints()
 
     }
@@ -64,19 +74,15 @@ class AlbumCell: UITableViewCell {
         ///Album Cover
         NSLayoutConstraint.activate([
             albumCover.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            albumCover.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            albumCover.widthAnchor.constraint(equalToConstant: 70),
-            albumCover.heightAnchor.constraint(equalToConstant: 70),
+            albumCover.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            albumCover.widthAnchor.constraint(equalTo: contentView.heightAnchor, multiplier: 0.5),
+            albumCover.heightAnchor.constraint(equalTo: contentView.heightAnchor, multiplier: 0.5)
         ])
-        ///Album Name
+
+        ///AlbumInfoStack (contain `albumName`, `albumSongsCount`)
         NSLayoutConstraint.activate([
-            albumName.leadingAnchor.constraint(equalTo: albumCover.trailingAnchor, constant: 16),
-            albumName.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-        ])
-        ///Album Songs Count
-        NSLayoutConstraint.activate([
-            albumSongsCount.leadingAnchor.constraint(equalTo: albumCover.trailingAnchor, constant: 16),
-            albumSongsCount.topAnchor.constraint(equalTo: contentView.bottomAnchor, constant: 16),
+            albumInfoStack.leadingAnchor.constraint(equalTo: albumCover.trailingAnchor, constant: 16),
+            albumInfoStack.centerYAnchor.constraint(equalTo: albumCover.centerYAnchor),
         ])
     }
 }
