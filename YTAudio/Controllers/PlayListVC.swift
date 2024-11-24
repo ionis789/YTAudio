@@ -102,7 +102,6 @@ class PlayListVC: UIViewController {
             headerTableView.heightAnchor.constraint(equalToConstant: 60)
         ])
 
-
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: headerTableView.bottomAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),

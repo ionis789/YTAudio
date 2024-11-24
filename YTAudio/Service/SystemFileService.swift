@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AVFoundation
 class SystemFileService {
     /**
         dir -  directory
@@ -21,8 +22,8 @@ class SystemFileService {
                                                                                             `Audio2`
         Each new created album inside`PlayList` will have its own dir, named after the album.
         Each album’s dir will contain `music files` in all audio formats supported by iOS System.
-        
      */
+
     static func createAlbum(albumName: String) {
         let fileManager = FileManager.default
         guard let docURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
@@ -82,5 +83,62 @@ class SystemFileService {
         /// Return empty array if somehow it didn't happend before, maybe it's just a bug or something beacuse all situation has been trated
         return []
 
+    }
+    
+    static func moveAudioFile(audio: AudioModel, albumName: String) {
+        print(audio, albumName)
+        let fileManager = FileManager.default
+
+        // Acces album directory where you want to move audio file
+        let pickedAlbumDirectory = fileManager
+            .urls(for: .documentDirectory, in: .userDomainMask)
+            .first!
+            .appendingPathComponent("PlayList")
+            .appendingPathComponent(albumName)
+
+        // Ensure the album directory exists
+        if !fileManager.fileExists(atPath: pickedAlbumDirectory.path) {
+            do {
+                try fileManager.createDirectory(at: pickedAlbumDirectory, withIntermediateDirectories: true, attributes: nil)
+            } catch {
+                print("Error creating album directory: \(error.localizedDescription)")
+                return
+            }
+        }
+
+        // Add the file name to the destination path
+        let destinationURL = pickedAlbumDirectory.appendingPathComponent(audio.url.lastPathComponent)
+
+        do {
+            try fileManager.moveItem(at: audio.url, to: destinationURL)
+            print("Audio file moved successfully to \(destinationURL.path)")
+        } catch {
+            print("Error moving audio file: \(error.localizedDescription)")
+        }
+    }
+
+    static func processPickedAudioURL(at url: URL) -> AudioModel? {
+        /// Extracts the `title` from the selected audio file. If the file has no title, it is considered invalid, and the method returns `nil`.
+        guard let title = url.lastPathComponent.split(separator: ".").first else {
+            print("Could not extract title from file name")
+            return nil
+        }
+
+        ///Create an asset for `audio metadata analysis`
+        let audioAsset = AVURLAsset(url: url)
+
+        /// Extract duraion
+
+        let duration: TimeInterval = audioAsset.duration.seconds
+        let artist: String = audioAsset.metadata.first(where: { $0.commonKey?.rawValue == "artist" })?.value as? String ?? "Unknown"
+
+        /// Extracts the `duration` from the selected audio file. If the file has invalid duration,  the method returns `nil`.
+        guard duration.isFinite && duration > 0 else {
+            print("Error in extracting duration")
+            return nil
+        }
+
+        /// If all cases have been passed successfully, it means a valid `AudioModel` has been created, which can now be returned.
+        return AudioModel(title: String(title), artist: artist, duration: duration, url: url)
     }
 }

@@ -9,8 +9,6 @@ import Foundation
 
 class PlayListManager {
 
-
-
     static func getPlayList() -> [AlbumModel] {
         print("\(#file) Getting play list...")
         return SystemFileService.getPlayList()
