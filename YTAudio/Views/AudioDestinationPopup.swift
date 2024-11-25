@@ -76,7 +76,7 @@ extension AudioDestinationPopup: UITableViewDelegate, UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let selectedAlbum = albumNamesList[indexPath.row]
-        SystemFileService.moveAudioFile(audio: pickedAudio, albumName: selectedAlbum)
+        SystemFileService.copyAudioFileToSandbox(audio: pickedAudio, albumName: selectedAlbum)
         dismiss(animated: true)
         print("Selected album for destination: \(selectedAlbum)")
     }

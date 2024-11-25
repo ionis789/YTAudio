@@ -59,19 +59,33 @@ class SystemFileService {
                 let playListContents = try fileManager.contentsOfDirectory(atPath: playListDir.path)
                 var albumsArray: [AlbumModel] = [] /// Initialize an empty array for `album dirs` in the current `PlayList` dir
 
+                // Iterate through playlist in order to get album dirs
                 for album in playListContents {
-                    let currentAlbumDir = playListDir.appendingPathComponent(album) /// Get album dir
-                    let currentAlbumName = currentAlbumDir.lastPathComponent /// Get album name
-                    var audioArray: [AudioModel] = [] /// Initialize an empty array for audio files in the current album dir
+                    if !album.hasPrefix(".") {
+                        let currentAlbumDir = playListDir.appendingPathComponent(album) /// Get album dir
+                        let currentAlbumName = currentAlbumDir.lastPathComponent /// Get album name
+                        var audioArray: [AudioModel] = [] /// Initialize an empty array for audio files in the current album dir
 
-                    /// Add all `audio files` in the currentAlbumDir  to the `audioArray`
-                    /// `audio` in for loop is just a string name of file from currentAlbumDir`
-                    for audio in try fileManager.contentsOfDirectory(atPath: currentAlbumDir.path) {
-                        let audioURL = currentAlbumDir.appendingPathComponent(audio)
-                        audioArray.append(AudioModel(title: audio, artist: "ArtistName", duration: 0, url: audioURL))
+                        /// Add all `audio files` in the currentAlbumDir  to the `audioArray`
+                        /// `audio` in for loop is just a string name of file from currentAlbumDir`
+
+                        do {
+                            if try !fileManager.contentsOfDirectory(atPath: currentAlbumDir.path).isEmpty {
+                                for audio in try fileManager.contentsOfDirectory(atPath: currentAlbumDir.path) {
+                                    if audio != ".DS_Store" {
+                                        let audioURL = currentAlbumDir.appendingPathComponent(audio)
+                                        let audio = self.processPickedAudioURL(at: audioURL)
+                                        audioArray.append(audio ?? AudioModel(title: "Unknown", artist: "Unknown", duration: 0.0, url: audioURL))
+                                    }
+                                }
+                            }
+                        } catch {
+                            print("Faield to get contents of \(currentAlbumName), \(error.localizedDescription)")
+                        }
+
+                        /// Apend album to albumsArray
+                        albumsArray.append(AlbumModel(title: currentAlbumName, songs: audioArray, cover: nil))
                     }
-                    /// Apend album to albumsArray
-                    albumsArray.append(AlbumModel(title: currentAlbumName, songs: audioArray, cover: nil))
                 }
                 print("\(#file) PlayList contents: \(albumsArray)")
                 return albumsArray
@@ -79,24 +93,23 @@ class SystemFileService {
                 print("\(#file) Faield to get PlayList contents \(error.localizedDescription)")
             }
         }
-
-        /// Return empty array if somehow it didn't happend before, maybe it's just a bug or something beacuse all situation has been trated
+        /// Return empty array if somehow didn't return anything before, maybe it's just a bug or something beacuse all situation has been trated
         return []
 
     }
-    
-    static func moveAudioFile(audio: AudioModel, albumName: String) {
+
+    static func copyAudioFileToSandbox(audio: AudioModel, albumName: String) {
         print(audio, albumName)
         let fileManager = FileManager.default
 
-        // Acces album directory where you want to move audio file
+        /// Acces album directory where you want to move audio file
         let pickedAlbumDirectory = fileManager
             .urls(for: .documentDirectory, in: .userDomainMask)
             .first!
             .appendingPathComponent("PlayList")
             .appendingPathComponent(albumName)
 
-        // Ensure the album directory exists
+        /// Ensure the album directory exists
         if !fileManager.fileExists(atPath: pickedAlbumDirectory.path) {
             do {
                 try fileManager.createDirectory(at: pickedAlbumDirectory, withIntermediateDirectories: true, attributes: nil)
@@ -105,40 +118,53 @@ class SystemFileService {
                 return
             }
         }
+        
+        let audioDestination = pickedAlbumDirectory.appendingPathComponent(audio.url.lastPathComponent)
 
-        // Add the file name to the destination path
-        let destinationURL = pickedAlbumDirectory.appendingPathComponent(audio.url.lastPathComponent)
+        /// Move audio file to selected album dir
+        /// Acces secured sandbox
+        if audio.url.startAccessingSecurityScopedResource() {
+            defer { audio.url.stopAccessingSecurityScopedResource() }
 
-        do {
-            try fileManager.moveItem(at: audio.url, to: destinationURL)
-            print("Audio file moved successfully to \(destinationURL.path)")
-        } catch {
-            print("Error moving audio file: \(error.localizedDescription)")
+            do {
+                try fileManager.copyItem(at: audio.url, to: audioDestination)
+                NotificationCenter.default.post(name: .reloadPlayListContent, object: nil)
+                print("Audio file moved successfully to \(audioDestination.path)")
+            } catch {
+                print("Error copying audio file: \(error.localizedDescription)")
+            }
+            
         }
     }
 
     static func processPickedAudioURL(at url: URL) -> AudioModel? {
-        /// Extracts the `title` from the selected audio file. If the file has no title, it is considered invalid, and the method returns `nil`.
-        guard let title = url.lastPathComponent.split(separator: ".").first else {
-            print("Could not extract title from file name")
+        if url.startAccessingSecurityScopedResource() {
+            defer { url.stopAccessingSecurityScopedResource() }
+            /// Extracts the `title` from the selected audio file. If the file has no title, it is considered invalid, and the method returns `nil`.
+            guard let title = url.lastPathComponent.split(separator: ".").first else {
+                print("Could not extract title from file name")
+                return nil
+            }
+
+            ///Create an asset for `audio metadata analysis`
+            let audioAsset = AVURLAsset(url: url)
+
+            /// Extract duraion
+
+            let duration: TimeInterval = audioAsset.duration.seconds
+            let artist: String = audioAsset.metadata.first(where: { $0.commonKey?.rawValue == "artist" })?.value as? String ?? "Unknown"
+
+            /// Extracts the `duration` from the selected audio file. If the file has invalid duration,  the method returns `nil`.
+            guard duration.isFinite && duration > 0 else {
+                print("Error in extracting duration")
+                return nil
+            }
+
+            /// If all cases have been passed successfully, it means a valid `AudioModel` has been created, which can now be returned.
+            return AudioModel(title: String(title), artist: artist, duration: duration, url: url)
+        } else {
+            print("Failed to access security-scoped resource")
             return nil
         }
-
-        ///Create an asset for `audio metadata analysis`
-        let audioAsset = AVURLAsset(url: url)
-
-        /// Extract duraion
-
-        let duration: TimeInterval = audioAsset.duration.seconds
-        let artist: String = audioAsset.metadata.first(where: { $0.commonKey?.rawValue == "artist" })?.value as? String ?? "Unknown"
-
-        /// Extracts the `duration` from the selected audio file. If the file has invalid duration,  the method returns `nil`.
-        guard duration.isFinite && duration > 0 else {
-            print("Error in extracting duration")
-            return nil
-        }
-
-        /// If all cases have been passed successfully, it means a valid `AudioModel` has been created, which can now be returned.
-        return AudioModel(title: String(title), artist: artist, duration: duration, url: url)
     }
 }

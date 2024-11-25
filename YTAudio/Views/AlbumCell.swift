@@ -20,7 +20,6 @@ class AlbumCell: UITableViewCell {
         }
     }
 
-
     //MARK: Views
     private lazy var albumCover: UIImageView = {
         let v = UIImageView()

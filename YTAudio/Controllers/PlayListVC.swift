@@ -14,9 +14,6 @@ class PlayListVC: UIViewController {
         didSet {
             print("\(#file) didSet")
         }
-        willSet {
-            print("\(#file) willSet")
-        }
     }
 
     private lazy var tableView: UITableView = {
@@ -178,6 +175,9 @@ extension PlayListVC: UITableViewDataSource, UITableViewDelegate {
          */
 
         /// Swift provide `deselectRow - method for UITableView` witch deselects a row that an index path identifies, with an option to animate the deselection.
+        
+        let vc = AlbumVC(album: playList[indexPath.row])
+        navigationController?.pushViewController(vc, animated: true)
         tableView.deselectRow(at: indexPath, animated: true)
 
     }
