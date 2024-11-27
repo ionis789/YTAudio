@@ -17,18 +17,18 @@ class AudioCell: UITableViewCell {
                 audionameLabel.text = audio.title.count > 15 ? audio.title.prefix(15) + "..." : audio.title
                 artistNameLabel.text = audio.artist
                 durationLabel.text = "Duration " + String(audio.duration)
-                thumbnailImageView.image = UIImage(named: "emptyAlbum")
+                audioImage.image = audio.image ?? UIImage(named: "emptyAlbum")
             } else {
                 audionameLabel.text = "Unknown"
                 artistNameLabel.text = "Unknown"
                 durationLabel.text = "0.00"
-                thumbnailImageView.image = UIImage(named: "emptyAlbum")
+                audioImage.image = UIImage(named: "emptyAlbum")
             }
         }
     }
     
     //MARK: Views
-    private lazy var thumbnailImageView: UIImageView = {
+    private lazy var audioImage: UIImageView = {
         let v = UIImageView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.contentMode = .scaleAspectFill
@@ -98,29 +98,29 @@ class AudioCell: UITableViewCell {
     }
     
     private func setupView() {
-        [thumbnailImageView, audioInfoStack, audioPropretiesStack].forEach { contentView.addSubview($0)}
+        [audioImage, audioInfoStack, audioPropretiesStack].forEach { contentView.addSubview($0)}
         setupConstraints()
     }
     
     private func setupConstraints() {
         /// ThumbnailImageView
         NSLayoutConstraint.activate([
-            thumbnailImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            thumbnailImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            thumbnailImageView.widthAnchor.constraint(equalToConstant: 40),
-            thumbnailImageView.heightAnchor.constraint(equalToConstant: 40)
+            audioImage.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            audioImage.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            audioImage.widthAnchor.constraint(equalToConstant: 40),
+            audioImage.heightAnchor.constraint(equalToConstant: 40)
         ])
         
         /// AudioInfoStack
         NSLayoutConstraint.activate([
-            audioInfoStack.leadingAnchor.constraint(equalTo: thumbnailImageView.trailingAnchor, constant: 16),
-            audioInfoStack.centerYAnchor.constraint(equalTo: thumbnailImageView.centerYAnchor),
+            audioInfoStack.leadingAnchor.constraint(equalTo: audioImage.trailingAnchor, constant: 16),
+            audioInfoStack.centerYAnchor.constraint(equalTo: audioImage.centerYAnchor),
         ])
         
         /// AudioPropretiesStack
         NSLayoutConstraint.activate([
             audioPropretiesStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            audioPropretiesStack.centerYAnchor.constraint(equalTo: thumbnailImageView.centerYAnchor),
+            audioPropretiesStack.centerYAnchor.constraint(equalTo: audioImage.centerYAnchor),
         ])
     }
 }

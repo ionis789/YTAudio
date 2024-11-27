@@ -145,12 +145,12 @@ class PlayListVC: UIViewController {
         present(alert, animated: true, completion: nil)
     }
 
-    /// Reload playList when new album has created
+    /// Reload `playList` when new album has created
     @objc private func requestToReloadPlayList() {
         self.playList = SystemFileService.getPlayList()
         tableView.reloadData()
     }
-
+    /// Text Field `validation`
     private func sayEmptyTextField() {
         let alert = UIAlertController(title: "Warning", message: "Empty text field, try again and insert album name", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
@@ -175,7 +175,7 @@ extension PlayListVC: UITableViewDataSource, UITableViewDelegate {
          */
 
         /// Swift provide `deselectRow - method for UITableView` witch deselects a row that an index path identifies, with an option to animate the deselection.
-        
+
         let vc = AlbumVC(album: playList[indexPath.row])
         navigationController?.pushViewController(vc, animated: true)
         tableView.deselectRow(at: indexPath, animated: true)
