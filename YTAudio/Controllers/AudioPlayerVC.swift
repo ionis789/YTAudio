@@ -7,15 +7,26 @@
 
 import UIKit
 import AVFoundation
-class AudioPlayer: UIViewController {
+import MediaPlayer
+class AudioPlayerVC: UIViewController {
 
     //MARK: Init audioPlayer, audioURL
     var audioPlayer = AVAudioPlayer()
-    var audioURL: URL?
     //MARK: Timer playback for synhronization betwen audio play time and slider position
     var playBackTimer: Timer?
+    var audio: AudioModel
+
 
     //MARK: Init views
+    private lazy var audioCoverImage: UIImageView = {
+        let v = UIImageView()
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.contentMode = .scaleAspectFill
+        v.layer.cornerRadius = 10
+        v.clipsToBounds = true
+        return v
+    }()
+
     private lazy var audioSlider: UISlider = {
         let v = UISlider()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -60,23 +71,25 @@ class AudioPlayer: UIViewController {
         return v
     }()
 
-    // MARK: Init Life cycle
+// MARK: Init Life cycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
         startPlayBackTimer()
     }
 
-    //MARK: Init audio file into player
-    init(pickedAudio: URL) {
-        self.audioURL = pickedAudio
+//MARK: Init audio file into player
+    init(pickedAudio: AudioModel) {
+        self.audio = pickedAudio
         do {
-            audioPlayer = try AVAudioPlayer(contentsOf: pickedAudio)
+            audioPlayer = try AVAudioPlayer(contentsOf: pickedAudio.url)
         } catch {
             print("Error playing audio file \(#file)")
         }
         super.init(nibName: nil, bundle: nil)
-
+        self.audioCoverImage.image = pickedAudio.image
+        configureAudioSession()
+        setupNowPlayingInfo()
         audioPlayer.play()
         audioSlider.maximumValue = Float(audioPlayer.duration)
 
@@ -86,17 +99,65 @@ class AudioPlayer: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    //MARK: Reset timer on deinit
+//MARK: Reset timer Audio on deinit
     deinit {
+        cleanupPlayer()
+        print("AudioPlayerVC: Deinitialized.")
+    }
+
+    private func setupNowPlayingInfo() {
+
+        var nowPlayingInfo: [String: Any] = [
+            MPMediaItemPropertyTitle: self.audio.title,
+            MPMediaItemPropertyArtist: self.audio.artist ?? "Unknown Artist",
+        ]
+
+        // Setează o imagine pentru Lock Screen (dacă există)
+        if let coverImage = self.audio.image {
+            let artwork = MPMediaItemArtwork(boundsSize: coverImage.size) { _ in coverImage }
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+        }
+
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+    }
+
+
+    private func configureAudioSession() {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+
+            // Setează categoria pentru redare în fundal
+            try audioSession.setCategory(.playback, mode: .default, options: [])
+            try audioSession.setActive(true)
+
+            print("Audio session configured for background playback.")
+        } catch {
+            print("Failed to configure audio session: \(error)")
+        }
+    }
+    private func cleanupPlayer() {
+        audioPlayer.delegate = nil
+        audioPlayer.stop()
         playBackTimer?.invalidate()
+        playBackTimer = nil
+        print("AudioPlayerVC: Player resources cleaned up.")
+
     }
 
     private func setupViews() {
         view.backgroundColor = .black
-        [playerStackView, audioSlider].forEach { view.addSubview($0) }
+        [playerStackView, audioSlider, audioCoverImage].forEach { view.addSubview($0) }
         setupConstraints()
     }
     private func setupConstraints() {
+
+        NSLayoutConstraint.activate([
+            audioCoverImage.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            audioCoverImage.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, multiplier: 0.5),
+            audioCoverImage.heightAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, multiplier: 0.5),
+            audioCoverImage.bottomAnchor.constraint(lessThanOrEqualTo: playerStackView.topAnchor)
+        ])
+
         NSLayoutConstraint.activate([
             playerStackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             playerStackView.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -120)
@@ -108,9 +169,9 @@ class AudioPlayer: UIViewController {
         ])
     }
 
-    //MARK: Actions
+//MARK: Actions
 
-    //MARK: Play and Pause audio
+// Play and Pause audio
     @objc func toogleAudioPlayer() {
         let config = UIImage.SymbolConfiguration(pointSize: 32, weight: .bold)
         if audioPlayer.isPlaying {
@@ -126,13 +187,16 @@ class AudioPlayer: UIViewController {
     private func startPlayBackTimer() {
         playBackTimer?.invalidate()
 
-        playBackTimer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector (changeSliderPosition), userInfo: nil, repeats: true)
+//        playBackTimer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector (changeSliderPosition), userInfo: nil, repeats: true)
+        playBackTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            self?.changeSliderPosition()
+        }
     }
     @objc private func changeSliderPosition() {
         audioSlider.value = Float(audioPlayer.currentTime)
     }
 
-    //MARK: Change slider position acording to audio playing time
+//MARK: Change slider position acording to audio playing time
     @objc func sliderValueChanged(_ sender: UISlider) {
         audioPlayer.currentTime = TimeInterval(sender.value)
     }

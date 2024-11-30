@@ -98,51 +98,6 @@ class SystemFileService {
     }
 
 
-    static func downloadAudioFileFromURL(fileURL: URL, title: String, duration: String, author: String, completion: @escaping (AudioModel?) -> Void) {
-        let downLoadTask = URLSession.shared.downloadTask(with: fileURL) { urlOrNil, responseOrNil, errorOrNil in
-
-            // Error handling
-            if let error = errorOrNil {
-                print("Error downloading file: \(error.localizedDescription)")
-                completion(nil) // Return nil if download fails
-                return
-            }
-
-            // Obtain tempLocation of downloaded file
-            guard let audioFileURL = urlOrNil else {
-                print("Error downloading file: No temporary location found")
-                completion(nil) // Return nil if no temporary location
-                return
-            }
-            print("File temporarily downloaded to: \(audioFileURL.path)")
-
-            // Move the file from the temp location to a permanent location (e.g., Documents directory)
-            do {
-
-                let documentsURL = try
-                FileManager.default.url(for: .documentDirectory,
-                                        in: .userDomainMask,
-                                        appropriateFor: nil,
-                                        create: false)
-                let savedURL = documentsURL.appendingPathComponent(title + ".mp3")
-                try FileManager.default.moveItem(at: audioFileURL, to: savedURL)
-
-                print("File moved to: \(savedURL.path)")
-
-                // Process the file after it's moved
-                DispatchQueue.main.async {
-                    let audioModel = self.processPickedAudioURL(at: savedURL)
-                    completion(audioModel) // Return the AudioModel via the completion handler
-                }
-            } catch {
-                print("Error moving file: \(error.localizedDescription)")
-                completion(nil) // Return nil if file move fails
-            }
-        }
-        downLoadTask.resume()
-    }
-
-
     static func copyAudioFileToSelectedAlbum(audio: AudioModel, albumName: String) {
         print(audio, albumName)
         let fileManager = FileManager.default
@@ -176,44 +131,9 @@ class SystemFileService {
         }
     }
 
-
-    static func proccessDownloadedAudioURL(at url: URL) -> AudioModel? {
-        /// Extracts the `title` from the selected audio file. If the file has no title, it is considered invalid, and the method returns `nil`.
-        guard let title = url.lastPathComponent.split(separator: ".").first else {
-            print("Could not extract title from file name")
-            return nil
-        }
-
-        ///Create an asset for `audio metadata analysis`
-        let audioAsset = AVURLAsset(url: url)
-
-        /// Extract duration
-        let duration: TimeInterval = audioAsset.duration.seconds
-
-        /// Extract artist name (if available)
-        let artist: String = audioAsset.metadata.first(where: { $0.commonKey?.rawValue == "artist" })?.value as? String ?? "Unknown"
-
-        /// Extract the audio image (if available)
-        var audioImage: UIImage?
-        if let audioImageData = audioAsset.metadata.first(where: { $0.commonKey?.rawValue == "artwork" })?.value as? Data {
-            audioImage = UIImage(data: audioImageData)
-        }
-
-        /// Extracts the `duration` from the selected audio file. If the file has `invalid duration`,  return `nil`.
-        guard duration.isFinite && duration > 0 else {
-            print("Error in extracting duration")
-            return nil
-        }
-
-        /// If `all cases` have been `passed successfully`, it means a valid `AudioModel` has been created, which can now be returned.
-        return AudioModel(title: String(title), artist: artist, duration: duration, url: url, image: audioImage ?? nil)
-    }
-
-
     ///Extract all `metaData` from audio file
     static func processPickedAudioURL(at url: URL) -> AudioModel? {
-//        if url.startAccessingSecurityScopedResource() {
-//            defer { url.stopAccessingSecurityScopedResource() }
+        
         /// Extracts the `title` from the selected audio file. If the file has no title, it is considered invalid, and the method returns `nil`.
         guard let title = url.lastPathComponent.split(separator: ".").first else {
             print("Could not extract title from file name")
@@ -243,10 +163,7 @@ class SystemFileService {
 
         /// If `all cases` have been `passed successfully`, it means a valid `AudioModel` has been created, which can now be returned.
         return AudioModel(title: String(title), artist: artist, duration: duration, url: url, image: audioImage ?? nil)
-//        } else {
-//            print("Failed to access security-scoped resource")
-//            return nil
-//        }
+
     }
 }
 

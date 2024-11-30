@@ -78,6 +78,7 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
         super.viewDidLoad()
         view.backgroundColor = .black
         setupViews()
+        setupDismissKeyboardGesture()
     }
 
     private func setupViews() {
@@ -120,111 +121,162 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
     }
 
     @objc private func didGetAudioButtonTapped() {
-        print("didGetAudioButtonTapped")
+        print("Get Tapped")
 
-        /// Check if the `textField` contains a valid URL.
+        //MARK: URL validation
         guard let textFieldURL = getAudioTextField.text, !textFieldURL.isEmpty else {
-            showAlert(title: "Error", message: "Please enter a valid URL")
+            showAlert(title: "Error", message: "Please write some URL.")
             return
         }
 
-        /// Build the server URL.
-        let serverURLStringFormat = "http://93.116.111.83:3000/extract-audio?url=\(textFieldURL)"
+        let serverURLStringFormat = "https://g5fm5s6l-3000.euw.devtunnels.ms/extract-audio?url=\(textFieldURL)"
+
         guard let serverURL = URL(string: serverURLStringFormat) else {
             showAlert(title: "Error", message: "Invalid URL format. Please check again.")
             return
         }
-
+        //MARK: Start activity indicator while get response from server
         fetchAudioActivityIndicator.startAnimating()
 
-        /// Create a task to send the request to the server.
-        let task = URLSession.shared.dataTask(with: serverURL) { data, response, error in
-            // Check for errors.
+        //Create a URLSession instance
+        let session = URLSession.shared
+
+        //Create a data task using URLSessionDataTask
+        let dataTask = session.dataTask(with: serverURL) { data, response, error in
+
+            //Check the errors
             if let error = error {
-                print("Error from server: \(#file), \(error.localizedDescription)")
+                print("Error: \(#file): \(error.localizedDescription)")
                 DispatchQueue.main.async {
+                    self.showAlert(title: "Error", message: "Something went wrong.\n Please try again later.")
                     self.fetchAudioActivityIndicator.stopAnimating()
-                    self.showAlert(title: "Error", message: "Request failed: \(error.localizedDescription)")
+                    self.getAudioTextField.text = ""
                 }
                 return
             }
-
-            // Check the server response.
-            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
-                print("Invalid server response.")
+            // Check if data is available
+            guard let responseData = data else {
+                print("Error: Invalid data received from server")
                 DispatchQueue.main.async {
+                    self.showAlert(title: "Error", message: "Error: Invalid data received from server.\n Please try again later.")
                     self.fetchAudioActivityIndicator.stopAnimating()
-                    self.showAlert(title: "Error", message: "Server response error.")
                     self.getAudioTextField.text = ""
                 }
                 return
             }
 
-            // Check if the server returned data.
-            guard let data = data else {
-                print("No data received.")
-                DispatchQueue.main.async {
-                    self.fetchAudioActivityIndicator.stopAnimating()
-                    self.showAlert(title: "Error", message: "No data received from server.")
-                    self.getAudioTextField.text = ""
-                }
-                return
-            }
-
+            // If no issues at this moment then start procces received data
             do {
-                // Parse the JSON data into a dictionary.
-                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                    //MARK: Proces Server Response
-                    self.handleServerDataResponse(data: json)
-                } else {
-                    print("Failed to parse JSON.")
-                    DispatchQueue.main.async {
-                        self.showAlert(title: "Error", message: "Failed to parse server response.")
-                        self.getAudioTextField.text = ""
+
+                if let json = try JSONSerialization.jsonObject(with: responseData, options: []) as? [String: String] {
+
+                    // If received data is valid then download audio file
+                    if let audioTitle = json["title"],
+                        let audioDownloadURL = json["audio"] {
+
+                        print("Audio title: \(audioTitle)")
+                        print("Audio download URL: \(audioDownloadURL)")
+                        // Create new task for download data from audioDownloadURL
+                        let downloadAudioURLStringFormat = "https://g5fm5s6l-3000.euw.devtunnels.ms" + audioDownloadURL
+                        let downloadAudioURL = URL(string: downloadAudioURLStringFormat)!
+
+                        let session = URLSession.shared
+
+                        let downloadTask = session.downloadTask(with: downloadAudioURL) { temporaryUrl, response, error in
+
+                            // Check for errors
+                            if let error = error {
+                                print("Error on trying download audio file from server")
+                                DispatchQueue.main.async {
+                                    print("Error: \(error)")
+                                    self.showAlert(title: "Error", message: "Error on trying download audio file from server.\n Please try again later.")
+                                    self.fetchAudioActivityIndicator.stopAnimating()
+                                }
+                            }
+
+                            if let tempURL = temporaryUrl {
+                                print("temporaryUrl", temporaryUrl ?? "Nothing in temporaryUrl")
+                                self.writeAudioData(audioData: tempURL, audioName: audioTitle)
+                                //MARK: Succesifuly moved audio and end all cycle
+                                DispatchQueue.main.async {
+                                    self.fetchAudioActivityIndicator.stopAnimating()
+                                    self.getAudioTextField.text = ""
+                                }
+                            }
+
+
+                        }
+                        downloadTask.resume()
                     }
                 }
+
             } catch {
-                print("JSON Parsing Error: \(error.localizedDescription)")
+                print("Error parsing JSON: \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    self.showAlert(title: "Error", message: "Error parsing server response.")
-                    self.getAudioTextField.text = ""
+                    self.showAlert(title: "Error", message: "Something went wrong when parsing JSON.\n Please try again later.")
+                    self.fetchAudioActivityIndicator.stopAnimating()
                 }
             }
 
-            // Stop the activity indicator on the main thread.
-            DispatchQueue.main.async {
-                self.getAudioTextField.resignFirstResponder()
-                self.fetchAudioActivityIndicator.stopAnimating()
-                self.getAudioTextField.text = ""
-            }
         }
-        task.resume()
+        dataTask.resume()
+
+
     }
 
-    // From server comes json response in format { ["String", any data] }
-    private func handleServerDataResponse(data: [String: Any]) {
-        guard let filePath = data["file"] as? String,
-            let title = data["title"] as? String,
-            let uploader = data["uploader"] as? String,
-            let duration = data["duration"] as? Int else {
-            print("Error: Missing or invalid data in server response")
-            return
+    // Configurare UITapGestureRecognizer pentru a ascunde tastatura la apăsarea pe un loc gol
+    private func setupDismissKeyboardGesture() {
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tapGesture.cancelsTouchesInView = false // Permite alte interacțiuni (cum ar fi apăsarea pe butoane)
+        view.addGestureRecognizer(tapGesture)
+    }
+
+    // Funcție pentru a ascunde tastatura
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
+    }
+
+    private func writeAudioData(audioData: URL, audioName: String) {
+
+        do {
+            // Create a destination URL to save the downloaded file
+            let docmunetsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let destinationURL = docmunetsDirectory.appendingPathComponent(audioName + ".mp3")
+
+            try FileManager.default.moveItem(at: audioData, to: destinationURL)
+
+            print("File saved to: \(destinationURL.path)")
+
+            if let audio = SystemFileService.processPickedAudioURL(at: destinationURL) {
+                DispatchQueue.main.async {
+                    let destionation = AudioDestinationPopup(audio: audio)
+                    self.present(destionation, animated: true, completion: nil)
+                    print(audio.title)
+                }
+            }
+
+        } catch {
+            print("Error saving audio file: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.fetchAudioActivityIndicator.stopAnimating()
+                self.showAlert(title: "Error", message: "Failed to save audio file.")
+            }
         }
-        // Base URL of the server
-        let serverBaseURL = "http://93.116.111.83:3000"
+    }
+
+// From server comes json response in format { ["String", any data] }
+    private func handleServerDataResponse(url: String) {
 
         // Construct the full URL
-        guard let fileDownloadURL = URL(string: serverBaseURL + filePath) else {
+        guard let fileDownloadURL = URL(string: url) else {
             print("Error: Invalid file URL")
             return
         }
         print("File URL: \(fileDownloadURL)")
-        print("Title: \(title)")
-        print("Uploader: \(uploader)")
-        print("Duration: \(duration) seconds")
+
 
         // Closure with my function from SystemFileService witch return AudioModel object
-        SystemFileService.downloadAudioFileFromURL(fileURL: fileDownloadURL, title: title, duration: String(duration), author: uploader) { audioModel in
+        NetworkService.downloadAudioFileFromURL(fileURL: fileDownloadURL) { audioModel in
             if let audio = audioModel {
                 let destination = AudioDestinationPopup(audio: audio)
                 self.present(destination, animated: true, completion: nil)
@@ -232,11 +284,7 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
             } else {
                 print("Error: Failed to download audio file")
             }
-
         }
-
-
-
     }
 
 

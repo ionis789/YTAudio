@@ -8,13 +8,13 @@
 import UIKit
 
 class AlbumVC: UIViewController {
-    
+
     var albumAudio: [AudioModel] {
         didSet {
             print("\(#file) didSet")
         }
     }
-    
+
     private lazy var tableView: UITableView = {
         let v = UITableView()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -26,12 +26,12 @@ class AlbumVC: UIViewController {
         v.tableFooterView = UIView()
         return v
     }()
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
-        }
-    
+    }
+
     init(album: AlbumModel) {
         self.albumAudio = album.songs
         super.init(nibName: nil, bundle: nil)
@@ -39,7 +39,7 @@ class AlbumVC: UIViewController {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     private func setupView() {
         view.addSubview(tableView)
         setupContraints()
@@ -56,11 +56,8 @@ class AlbumVC: UIViewController {
 extension AlbumVC: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         print(albumAudio[indexPath.row].title)
-        
-        let popupVC = AudioPlayer(pickedAudio: albumAudio[indexPath.row].url)
-        
+        let popupVC = AudioPlayerVC(pickedAudio: albumAudio[indexPath.row])
         present(popupVC, animated: true)
-        
         tableView.deselectRow(at: indexPath, animated: true)
     }
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -68,7 +65,7 @@ extension AlbumVC: UITableViewDelegate, UITableViewDataSource {
         cell.pickedAudio = albumAudio[indexPath.row]
         return cell
     }
-    
+
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         albumAudio.count
     }
