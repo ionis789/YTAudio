@@ -1,5 +1,5 @@
 //
-//  AudioImportService.swift
+//  SystemFileService.swift
 //  YTAudio
 //
 //  Created by Ion Socol on 11/10/24.
@@ -35,6 +35,22 @@ class SystemFileService {
             NotificationCenter.default.post(name: .reloadPlayListContent, object: nil)
         } catch {
             print("\(#file) Failed create album directory \(error.localizedDescription)")
+        }
+    }
+
+    static func deleteAlbum(atDir albumName: String) {
+        let fileManager = FileManager.default
+        if let albumDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("PlayList").appendingPathComponent(albumName) {
+            do {
+                if fileManager.fileExists(atPath: albumDir.path) {
+                    try fileManager.removeItem(at: albumDir)
+                }
+            } catch {
+                print("Error deleting album directory \(error.localizedDescription)")
+                return
+            }
+        } else {
+            print("Failed to locate the album directory.")
         }
     }
 
@@ -123,9 +139,16 @@ class SystemFileService {
 
         /// Move audio file to selected album dir
         do {
-            try fileManager.copyItem(at: audio.url, to: audioDestination)
-            NotificationCenter.default.post(name: .reloadPlayListContent, object: nil)
-            print("Audio file moved successfully to \(audioDestination.path)")
+            if audio.url.startAccessingSecurityScopedResource() {
+                defer {
+                    audio.url.stopAccessingSecurityScopedResource()
+                }
+                try fileManager.copyItem(at: audio.url, to: audioDestination)
+                NotificationCenter.default.post(name: .reloadPlayListContent, object: nil)
+                print("Audio file moved successfully to \(audioDestination.path)")
+            } else {
+                print("Failed to access the file resource securely.")
+            }
         } catch {
             print("Error copying audio file: \(error.localizedDescription)")
         }
@@ -133,7 +156,7 @@ class SystemFileService {
 
     ///Extract all `metaData` from audio file
     static func processPickedAudioURL(at url: URL) -> AudioModel? {
-        
+
         /// Extracts the `title` from the selected audio file. If the file has no title, it is considered invalid, and the method returns `nil`.
         guard let title = url.lastPathComponent.split(separator: ".").first else {
             print("Could not extract title from file name")

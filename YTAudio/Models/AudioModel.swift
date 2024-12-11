@@ -1,5 +1,5 @@
 //
-//  SongModel.swift
+//  AudioModel.swift
 //  YTAudio
 //
 //  Created by Ion Socol on 11/10/24.

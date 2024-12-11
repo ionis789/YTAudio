@@ -8,34 +8,30 @@
 import UIKit
 
 class AudioCell: UITableViewCell {
-    
-    
+
+
     //MARK: Set all propreties for audioCellView
     var pickedAudio: AudioModel? {
         didSet {
             if let audio = self.pickedAudio {
+                audioCover.image = audio.image ?? UIImage(named: "emptyAudio")
                 audionameLabel.text = audio.title.count > 15 ? audio.title.prefix(15) + "..." : audio.title
                 artistNameLabel.text = audio.artist
                 durationLabel.text = "Duration " + String(audio.duration)
-                audioImage.image = audio.image ?? UIImage(named: "emptyAlbum")
-            } else {
-                audionameLabel.text = "Unknown"
-                artistNameLabel.text = "Unknown"
-                durationLabel.text = "0.00"
-                audioImage.image = UIImage(named: "emptyAlbum")
             }
         }
     }
-    
+
     //MARK: Views
-    private lazy var audioImage: UIImageView = {
+    private lazy var audioCover: UIImageView = {
         let v = UIImageView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.contentMode = .scaleAspectFill
         v.clipsToBounds = true
+        v.layer.masksToBounds = true
         return v
     }()
-    
+
     private lazy var audionameLabel: UILabel = {
         let v = UILabel()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -43,7 +39,7 @@ class AudioCell: UITableViewCell {
         v.textColor = .white
         return v
     }()
-    
+
     private lazy var artistNameLabel: UILabel = {
         let v = UILabel()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -51,7 +47,7 @@ class AudioCell: UITableViewCell {
         v.textColor = .white
         return v
     }()
-    
+
     private lazy var durationLabel: UILabel = {
         let v = UILabel()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -59,7 +55,7 @@ class AudioCell: UITableViewCell {
         v.textColor = .white
         return v
     }()
-    
+
     private lazy var moreOptionsButton: UIButton = {
         let v = UIButton()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -67,27 +63,27 @@ class AudioCell: UITableViewCell {
         v.setImage(UIImage(systemName: "ellipsis", withConfiguration: config), for: .normal)
         return v
     }()
-    
-    private lazy var audioPropretiesStack: UIStackView =  {
+
+    private lazy var audioPropretiesStack: UIStackView = {
         let v = UIStackView(arrangedSubviews: [moreOptionsButton, durationLabel])
         v.axis = .vertical
         v.alignment = .trailing
         v.distribution = .fillEqually
-        v.spacing = 4
+        v.spacing = 8
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
     }()
-    
+
     private lazy var audioInfoStack: UIStackView = {
         let v = UIStackView(arrangedSubviews: [audionameLabel, artistNameLabel])
+        v.translatesAutoresizingMaskIntoConstraints = false
         v.axis = .vertical
         v.alignment = .leading
         v.distribution = .fillEqually
-        v.spacing = 4
-        v.translatesAutoresizingMaskIntoConstraints = false
+        v.spacing = 8
         return v
     }()
-    
+
     //MARK: Init cell, here comes the identifier `audioCell`
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -96,31 +92,34 @@ class AudioCell: UITableViewCell {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     private func setupView() {
-        [audioImage, audioInfoStack, audioPropretiesStack].forEach { contentView.addSubview($0)}
+        [audioCover, audioInfoStack, audioPropretiesStack].forEach { contentView.addSubview($0) }
         setupConstraints()
     }
-    
     private func setupConstraints() {
-        /// ThumbnailImageView
+        // Image constraints
         NSLayoutConstraint.activate([
-            audioImage.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            audioImage.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            audioImage.widthAnchor.constraint(equalToConstant: 40),
-            audioImage.heightAnchor.constraint(equalToConstant: 40)
+            // Imaginea se ancorează complet de contentView cu padding
+            audioCover.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            audioCover.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
+            audioCover.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            audioCover.widthAnchor.constraint(lessThanOrEqualToConstant: 60),
+            audioCover.heightAnchor.constraint(lessThanOrEqualToConstant: 60),
         ])
-        
-        /// AudioInfoStack
+
         NSLayoutConstraint.activate([
-            audioInfoStack.leadingAnchor.constraint(equalTo: audioImage.trailingAnchor, constant: 16),
-            audioInfoStack.centerYAnchor.constraint(equalTo: audioImage.centerYAnchor),
+            audioInfoStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            audioInfoStack.leadingAnchor.constraint(equalTo: audioCover.trailingAnchor, constant: 8),
+            audioInfoStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+
+            audioPropretiesStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            audioPropretiesStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -8),
+            audioPropretiesStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8)
         ])
-        
-        /// AudioPropretiesStack
-        NSLayoutConstraint.activate([
-            audioPropretiesStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            audioPropretiesStack.centerYAnchor.constraint(equalTo: audioImage.centerYAnchor),
-        ])
+    }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        audioCover.layer.cornerRadius = audioCover.frame.size.width / 2
     }
 }

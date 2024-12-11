@@ -72,10 +72,11 @@ class AlbumCell: UITableViewCell {
     private func setupConstraints() {
         ///Album Cover
         NSLayoutConstraint.activate([
-            albumCover.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            albumCover.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            albumCover.widthAnchor.constraint(equalTo: contentView.heightAnchor, multiplier: 0.5),
-            albumCover.heightAnchor.constraint(equalTo: contentView.heightAnchor, multiplier: 0.5)
+            albumCover.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
+            albumCover.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            albumCover.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            albumCover.widthAnchor.constraint(equalToConstant: 80),
+            albumCover.heightAnchor.constraint(equalToConstant: 80),
         ])
 
         ///AlbumInfoStack (contain `albumName`, `albumSongsCount`)
@@ -83,5 +84,9 @@ class AlbumCell: UITableViewCell {
             albumInfoStack.leadingAnchor.constraint(equalTo: albumCover.trailingAnchor, constant: 16),
             albumInfoStack.centerYAnchor.constraint(equalTo: albumCover.centerYAnchor),
         ])
+    }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        albumCover.layer.cornerRadius = albumCover.bounds.height / 2
     }
 }

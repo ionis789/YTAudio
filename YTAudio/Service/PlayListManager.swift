@@ -1,5 +1,5 @@
 //
-//  AlbumManager.swift
+//  PlayListManager.swift
 //  YTAudio
 //
 //  Created by Ion Socol on 11/10/24.

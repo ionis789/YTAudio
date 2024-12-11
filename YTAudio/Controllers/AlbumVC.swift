@@ -1,5 +1,5 @@
 //
-//  AlbumList.swift
+//  AlbumVC.swift
 //  YTAudio
 //
 //  Created by Ion Socol on 11/24/24.
@@ -15,21 +15,29 @@ class AlbumVC: UIViewController {
         }
     }
 
-    private lazy var tableView: UITableView = {
+    private lazy var albumTableView: UITableView = {
         let v = UITableView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.delegate = self
         v.dataSource = self
         v.register(AudioCell.self, forCellReuseIdentifier: "audioCell")
-        v.estimatedRowHeight = 90
         v.rowHeight = UITableView.automaticDimension
+        v.estimatedRowHeight = 200
         v.tableFooterView = UIView()
+        return v
+    }()
+    private lazy var emptyAlbumLabel: UILabel = {
+        let v = UILabel()
+        v.text = "Nothing here..."
+        v.textAlignment = .center
+        v.font = .systemFont(ofSize: 32, weight: .bold)
+        v.numberOfLines = 0
         return v
     }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupView()
+            setupView()
     }
 
     init(album: AlbumModel) {
@@ -41,22 +49,22 @@ class AlbumVC: UIViewController {
     }
 
     private func setupView() {
-        view.addSubview(tableView)
+        view.addSubview(albumTableView)
         setupContraints()
     }
     private func setupContraints() {
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            albumTableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            albumTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            albumTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            albumTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
 }
 extension AlbumVC: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         print(albumAudio[indexPath.row].title)
-        let popupVC = AudioPlayerVC(pickedAudio: albumAudio[indexPath.row])
+        let popupVC = MediaPlayerVC(album: albumAudio, pickedAudioIndex: indexPath.row)
         present(popupVC, animated: true)
         tableView.deselectRow(at: indexPath, animated: true)
     }

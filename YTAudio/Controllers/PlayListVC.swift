@@ -1,5 +1,5 @@
 //
-//  ViewController.swift
+//  PlayListVC.swift
 //  YTAudio
 //
 //  Created by Ion Socol on 11/10/24.
@@ -16,7 +16,7 @@ class PlayListVC: UIViewController {
         }
     }
 
-    private lazy var tableView: UITableView = {
+    private lazy var playlistTableView: UITableView = {
         let v = UITableView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.dataSource = self
@@ -36,23 +36,17 @@ class PlayListVC: UIViewController {
          */
         return v
     }()
-    private lazy var createAlbumButton: UIButton = {
-        let v = UIButton()
-        v.translatesAutoresizingMaskIntoConstraints = false
+    private lazy var createAlbumButton: UIBarButtonItem = {
+        let v = UIBarButtonItem(title: "Create", style: .plain, target: self, action: #selector(didCreateAlbumTapped))
         v.tintColor = .myRed
-        let config = UIImage.SymbolConfiguration(pointSize: 24)
-        v.setImage(UIImage(systemName: "rectangle.stack.badge.plus", withConfiguration: config), for: .normal)
-        v.addTarget(self, action: #selector(didCreateAlbumTapped), for: .touchUpInside)
         return v
     }()
 
-    private lazy var editAlbumsButton: UIButton = {
-        let v = UIButton()
-        v.translatesAutoresizingMaskIntoConstraints = false
-        v.setTitle("Edit", for: .normal)
-        v.setTitleColor(.myRed, for: .normal)
-        v.titleLabel?.font = .systemFont(ofSize: 16, weight: .regular)
+    private lazy var editAlbumsButton: UIBarButtonItem = {
+        let v = UIBarButtonItem(title: "Edit", style: .plain, target: self, action: #selector(editAlbumsButtonTapped))
+        v.tintColor = .myRed
         return v
+
     }()
 
     // MARK: - Lifecycle
@@ -78,12 +72,18 @@ class PlayListVC: UIViewController {
 
     private func setupView() {
         /// Configure subviews ierarhi
-        [headerTableView, tableView].forEach { view.addSubview($0) }
+        [playlistTableView].forEach { view.addSubview($0) }
+        navigationItem.rightBarButtonItem = editAlbumsButton // assign edit button to tableview
+        navigationItem.leftBarButtonItem = createAlbumButton // assign create button to tableview
 
         /// Add the createAlbumButtonView, editAlbumListLabel to the header
-        [editAlbumsButton, createAlbumButton].forEach { headerTableView.addSubview($0) }
+//        [editAlbumsButton, createAlbumButton].forEach { headerTableView.addSubview($0) }
 
         setupConstraints()
+    }
+    @objc private func editAlbumsButtonTapped() {
+        playlistTableView.setEditing(!playlistTableView.isEditing, animated: true)
+        editAlbumsButton.title = playlistTableView.isEditing ? "Done" : "Edit" // Actualizează titlul
     }
     private func setupConstraints() {
         /**
@@ -91,38 +91,17 @@ class PlayListVC: UIViewController {
          The top of tableView starts from safeAreaLayoutGuide and go to screen bottom, to avoid UI problems.
          */
 
-        /// Constraints for the headerTableView (custom header view)
         NSLayoutConstraint.activate([
-            headerTableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            headerTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            headerTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            headerTableView.heightAnchor.constraint(equalToConstant: 60)
-        ])
-
-        NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: headerTableView.bottomAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-        ])
-
-
-        /// Constraints for the editAlbumsButton (position it in the top-left corner)
-        NSLayoutConstraint.activate([
-            editAlbumsButton.centerYAnchor.constraint(equalTo: headerTableView.centerYAnchor),
-            editAlbumsButton.leadingAnchor.constraint(equalTo: headerTableView.leadingAnchor, constant: 16),
-        ])
-
-        /// Constraints for the createAlbumButton (position it in the top-right corner)
-        NSLayoutConstraint.activate([
-            createAlbumButton.centerYAnchor.constraint(equalTo: headerTableView.centerYAnchor),
-            createAlbumButton.trailingAnchor.constraint(equalTo: headerTableView.trailingAnchor, constant: -16),
+            playlistTableView.topAnchor.constraint(equalTo: view.topAnchor),
+            playlistTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            playlistTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            playlistTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
         ])
     }
 
     //MARK: createAlbum Alert
     @objc private func didCreateAlbumTapped() {
-
+        isEditing = false
         let alert = UIAlertController(title: "Create", message: "Insert album name", preferredStyle: .alert)
         alert.addTextField { textField in
             textField.placeholder = "Album Name"
@@ -148,7 +127,7 @@ class PlayListVC: UIViewController {
     /// Reload `playList` when new album has created
     @objc private func requestToReloadPlayList() {
         self.playList = SystemFileService.getPlayList()
-        tableView.reloadData()
+        playlistTableView.reloadData()
     }
     /// Text Field `validation`
     private func sayEmptyTextField() {
@@ -166,6 +145,20 @@ class PlayListVC: UIViewController {
 
 extension PlayListVC: UITableViewDataSource, UITableViewDelegate {
 
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+
+            // Delete album from system file
+            if indexPath.row >= 0 {
+                SystemFileService.deleteAlbum(atDir: playList[indexPath.row].title)
+            }
+
+            // Delete album from UI
+            print(playList[indexPath.row].title)
+            playList.remove(at: indexPath.row)
+            tableView.deleteRows(at: [indexPath], with: .fade)
+        }
+    }
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         print("\(playList[indexPath.row].title) Selected")
         /**

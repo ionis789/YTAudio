@@ -12,18 +12,26 @@ class RootTabBarVC: UITabBarController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Set the color of the tab bar items (both selected and unselected)
-        UITabBar.appearance().tintColor = .myRed // For selected items
-        UITabBar.appearance().unselectedItemTintColor = .gray // For unselected items
+        // Set the color of the tab bar items (selected and unselected)
+        UITabBar.appearance().tintColor = .myRed // Color for selected tab items
+        UITabBar.appearance().unselectedItemTintColor = .gray // Color for unselected tab items
 
+        // Wrap PlayListVC inside a UINavigationController to enable a navigation bar
         let albumVC = PlayListVC(albums: PlayListManager.getPlayList())
-        let ImportAudioVC = ImportAudioVC()
+        let albumNavController = UINavigationController(rootViewController: albumVC)
+        albumNavController.tabBarItem = UITabBarItem(title: "Albums", image: UIImage(systemName: "rectangle.stack"), tag: 0)
+
+        // Wrap ImportAudioVC inside a UINavigationController if a navigation bar is needed
+        let importAudioVC = ImportAudioVC()
+        let importNavController = UINavigationController(rootViewController: importAudioVC)
+        importNavController.tabBarItem = UITabBarItem(title: "Import", image: UIImage(systemName: "plus"), tag: 1)
+
+        // Wrap SettingsVC inside a UINavigationController for consistent navigation behavior
         let settingsVC = SettingsVC()
+        let settingsNavController = UINavigationController(rootViewController: settingsVC)
+        settingsNavController.tabBarItem = UITabBarItem(title: "Settings", image: UIImage(systemName: "gearshape"), tag: 2)
 
-        albumVC.tabBarItem = UITabBarItem(title: "Albums", image: UIImage(systemName: "rectangle.stack"), tag: 0)
-        ImportAudioVC.tabBarItem = UITabBarItem(title: "Import", image: UIImage(systemName: "plus"), tag: 1)
-        settingsVC.tabBarItem = UITabBarItem(title: "Settings", image: UIImage(systemName: "gearshape"), tag: 2)
-
-        self.viewControllers = [albumVC, ImportAudioVC, settingsVC]
+        // Assign view controllers to the tab bar
+        self.viewControllers = [albumNavController, importNavController, settingsNavController]
     }
 }
