@@ -139,16 +139,16 @@ class SystemFileService {
 
         /// Move audio file to selected album dir
         do {
-            if audio.url.startAccessingSecurityScopedResource() {
-                defer {
-                    audio.url.stopAccessingSecurityScopedResource()
-                }
+//            if audio.url.startAccessingSecurityScopedResource() {
+//                defer {
+//                    audio.url.stopAccessingSecurityScopedResource()
+//                }
                 try fileManager.copyItem(at: audio.url, to: audioDestination)
                 NotificationCenter.default.post(name: .reloadPlayListContent, object: nil)
                 print("Audio file moved successfully to \(audioDestination.path)")
-            } else {
-                print("Failed to access the file resource securely.")
-            }
+//            } else {
+//                print("Failed to access the file resource securely.")
+//            }
         } catch {
             print("Error copying audio file: \(error.localizedDescription)")
         }

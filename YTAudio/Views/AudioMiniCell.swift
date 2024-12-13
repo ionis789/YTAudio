@@ -11,23 +11,26 @@ class AudioMiniCell: UITableViewCell {
     var audio: AudioModel? {
         didSet {
             if let audio = self.audio {
-                audionNameLabel.text = audio.title
+                audioNameLabel.text = audio.title.count > 30 ? audio.title.prefix(30) + "..." : audio.title
                 audioCover.image = audio.image ?? UIImage(named: "emptyAudio")
             }
         }
     }
     
     //MARK: Views
-    private lazy var audionNameLabel: UILabel = {
+    private lazy var audioNameLabel: UILabel = {
         let v = UILabel()
-        v.font = .systemFont(ofSize: 18, weight: .semibold)
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.font = .systemFont(ofSize: 16, weight: .semibold)
         v.textColor = .white
+        v.textAlignment = .left
         v.numberOfLines = 0
         return v
     }()
     
     private lazy var audioCover: UIImageView = {
         let v = UIImageView()
+        v.translatesAutoresizingMaskIntoConstraints = false
         v.contentMode = .scaleAspectFill
         v.clipsToBounds = true
         v.layer.cornerRadius = 10
@@ -48,7 +51,7 @@ class AudioMiniCell: UITableViewCell {
     }
     
     private func setupView() {
-        [audioCover, audionNameLabel].forEach {contentView.addSubview($0)}
+        [audioCover, audioNameLabel].forEach {contentView.addSubview($0)}
         setupConstraints()
     }
     private func setupConstraints() {
@@ -61,8 +64,9 @@ class AudioMiniCell: UITableViewCell {
             audioCover.heightAnchor.constraint(lessThanOrEqualToConstant: 40),
             
             //Audio Title
-            audionNameLabel.leadingAnchor.constraint(equalTo: audioCover.trailingAnchor, constant: 10),
-            audionNameLabel.centerYAnchor.constraint(equalTo: audioCover.centerYAnchor),
+            audioNameLabel.leadingAnchor.constraint(equalTo: audioCover.trailingAnchor, constant: 10),
+            audioNameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -10),
+            audioNameLabel.centerYAnchor.constraint(equalTo: audioCover.centerYAnchor),
         ])
     }
 

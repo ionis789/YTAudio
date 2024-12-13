@@ -14,9 +14,18 @@ class MediaPlayerVC: UIViewController {
 
     ///Audio Model
     var album: [AudioModel]
-    var pickedAudioIndex: Int
+    var pickedAudioIndex: Int? {
+        didSet {
+            if let index = pickedAudioIndex {
+                initializePlayer()
+                setupViews()
+                updatePlayBackTimer()
+                print("New audio index \(index)")
+            }
+        }
+    }
     var audioPlayer: AVAudioPlayer?
-    
+
     /// `Timer` playback for `synhronization` betwen audio play time and slider position
     var playBackTimer: Timer?
 
@@ -25,14 +34,15 @@ class MediaPlayerVC: UIViewController {
             updatePLayPauseButtonUI(isPlaying: isAudioPlaying)
         }
     }
-    
+
     var isLoop = false // check if for current audio is loop option activate
+    var isShuffle = false
     var isSeeking = false // track slider change
 
     //MARK: Init views
-    
+
     /// miniCell id
-    private lazy var tableView: UITableView = {
+    private lazy var mediaPlayerTableView: UITableView = {
         let v = UITableView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.dataSource = self
@@ -41,14 +51,15 @@ class MediaPlayerVC: UIViewController {
         v.rowHeight = UITableView.automaticDimension
         v.estimatedRowHeight = 60
         v.tableFooterView = UIView()
+        v.backgroundColor = .black
         return v
     }()
-    
+
     private lazy var audioCoverImage: UIImageView = {
         let v = UIImageView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.contentMode = .scaleAspectFill
-        v.layer.cornerRadius = 30
+        v.layer.cornerRadius = 20
         v.clipsToBounds = true
 
         // Creează fundalul cu gradient (cețos) al imaginii
@@ -86,6 +97,7 @@ class MediaPlayerVC: UIViewController {
         let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .semibold)
         v.setImage(UIImage(systemName: "chevron.left", withConfiguration: config), for: .normal)
         v.tintColor = .myRed
+        v.addTarget(self, action: #selector (previousAudioButtonTapped), for: .touchUpInside)
         return v
     }()
 
@@ -95,6 +107,7 @@ class MediaPlayerVC: UIViewController {
         let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .semibold)
         v.setImage(UIImage(systemName: "chevron.right", withConfiguration: config), for: .normal)
         v.tintColor = .myRed
+        v.addTarget(self, action: #selector(nextAudioButtonTapped), for: .touchUpInside)
         return v
     }()
 
@@ -107,6 +120,7 @@ class MediaPlayerVC: UIViewController {
         v.addTarget(self, action: #selector(togglePlayPlauseButton), for: .touchUpInside)
         return v
     }()
+
     private lazy var repeatButton: UIButton = {
         let v = UIButton()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -114,6 +128,7 @@ class MediaPlayerVC: UIViewController {
         v.tintColor = .myRed
         return v
     }()
+
     private lazy var shuffleButton: UIButton = {
         let v = UIButton()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -130,15 +145,6 @@ class MediaPlayerVC: UIViewController {
         return v
     }()
 
-
-//    private lazy var playerNavigationStack: UIStackView = {
-//        let v = UIStackView(arrangedSubviews: [previousAudioButton, playButton, nextAudioButton])
-//        v.translatesAutoresizingMaskIntoConstraints = false
-//        v.axis = .horizontal
-//        v.distribution = .fillProportionally
-//        return v
-//    }()
-
 // MARK: Init Life cycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -149,18 +155,10 @@ class MediaPlayerVC: UIViewController {
 //MARK: Init audio file into player
     init(album: [AudioModel], pickedAudioIndex: Int) {
         self.album = album
-        self.pickedAudioIndex = pickedAudioIndex
         super.init(nibName: nil, bundle: nil)
+        self.pickedAudioIndex = pickedAudioIndex
+        initializePlayer()
 
-        do {
-            self.audioPlayer = try AVAudioPlayer(contentsOf: album[pickedAudioIndex].url)
-            self.audioPlayer?.prepareToPlay()
-            self.audioPlayer?.delegate = self
-            self.audioPlayer?.play()
-            audioSlider.maximumValue = Float(audioPlayer?.duration ?? 0)
-        } catch {
-            print("Error initializing audioPlayer: \(#file), \(error)")
-        }
     }
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -192,11 +190,24 @@ class MediaPlayerVC: UIViewController {
         print("AudioPlayerVC: Player resources cleaned up.")
 
     }
+    //MARK: initializePlayer
+    private func initializePlayer() {
+        do {
+            self.audioPlayer = try AVAudioPlayer(contentsOf: album[pickedAudioIndex ?? 0].url)
+            self.audioPlayer?.prepareToPlay()
+            self.audioPlayer?.delegate = self
+            self.audioPlayer?.play()
+            audioSlider.maximumValue = Float(audioPlayer?.duration ?? 0)
+        } catch {
+            print("Error initializing audioPlayer: \(#file), \(error)")
+        }
+        configureAudioSession()
+    }
 
     private func setupViews() {
         view.backgroundColor = .black
-        [previousAudioButton, nextAudioButton, playerControlStack, audioSlider, audioCoverImage, tableView].forEach { view.addSubview($0) }
-        audioCoverImage.image = album[pickedAudioIndex].image ?? UIImage(named: "emptyAudio")
+        [previousAudioButton, nextAudioButton, playerControlStack, audioSlider, audioCoverImage, mediaPlayerTableView].forEach { view.addSubview($0) }
+        audioCoverImage.image = album[pickedAudioIndex ?? 0].image ?? UIImage(named: "emptyAudio")
         setupConstraints()
     }
     private func setupConstraints() {
@@ -207,11 +218,11 @@ class MediaPlayerVC: UIViewController {
             audioCoverImage.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, multiplier: 0.7),
             audioCoverImage.heightAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, multiplier: 0.7),
         ])
-        
+
         NSLayoutConstraint.activate([
             previousAudioButton.centerYAnchor.constraint(equalTo: audioCoverImage.centerYAnchor),
             previousAudioButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
-            
+
             nextAudioButton.centerYAnchor.constraint(equalTo: audioCoverImage.centerYAnchor),
             nextAudioButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
         ])
@@ -227,12 +238,12 @@ class MediaPlayerVC: UIViewController {
             audioSlider.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.8),
             audioSlider.heightAnchor.constraint(equalToConstant: 60)
         ])
-        
+
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: playerControlStack.bottomAnchor, constant: 10),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            mediaPlayerTableView.topAnchor.constraint(equalTo: playerControlStack.bottomAnchor, constant: 10),
+            mediaPlayerTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            mediaPlayerTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            mediaPlayerTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
 
@@ -245,12 +256,29 @@ class MediaPlayerVC: UIViewController {
         playButton.setImage(image, for: .normal)
     }
 
-
-
-    // Shuffle audio
-    @objc func shuffleAlbumAudios() {
-        // shuffle audio array
+    //MARK: previousAudioButtonTapped method
+    @objc private func previousAudioButtonTapped() {
+        if var index = self.pickedAudioIndex, index > 0 && index < self.album.count {
+            index -= 1
+            self.pickedAudioIndex = index
+        }
     }
+
+    //MARK: nextAudioButtonTapped
+
+    @objc private func nextAudioButtonTapped() {
+        if var index = self.pickedAudioIndex, index >= 0 && index < self.album.count - 1 {
+            index += 1
+            self.pickedAudioIndex = index
+        }
+    }
+
+
+    //MARK: Shuffle audio
+    @objc func shuffleAlbum() {
+
+    }
+    //MARK: Loop audio
     @objc func loopCurrentAudio() {
 
     }
@@ -297,28 +325,38 @@ class MediaPlayerVC: UIViewController {
 }
 
 extension MediaPlayerVC: UITableViewDataSource, UITableViewDelegate {
-    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        pickedAudioIndex = indexPath.row
+        print(album[indexPath.row].title)
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
+
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: "audioMiniCell",for: indexPath) as? AudioMiniCell else { return UITableViewCell() }
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "audioMiniCell", for: indexPath) as? AudioMiniCell else { return UITableViewCell() }
         cell.audio = album[indexPath.row]
+        cell.backgroundView?.backgroundColor = .clear
+        cell.backgroundColor = .clear
         return cell
     }
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-        print(album[indexPath.row].title)
-    }
+
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return album.count
     }
-    
+
 }
 
 extension MediaPlayerVC: AVAudioPlayerDelegate {
     // This method automaticaly stop audio player
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        print("Finished playing")
-        isAudioPlaying = player.isPlaying
+        print("\(album[pickedAudioIndex ?? 0].title) Finished playing")
+        // Daca nu e pusa redarea pe loop la un anumit audio sau nu e pornita optiunea de shuffle la album, automat pornesc urmatorul audio
+        if !isLoop, !isShuffle {
+            guard var index = self.pickedAudioIndex else { return }
+            index += 1
+            self.pickedAudioIndex = index
+        }
+        print("Start next: \(album[pickedAudioIndex ?? 0 + 1].title)")
+
     }
 }
 

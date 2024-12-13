@@ -59,7 +59,7 @@ final class CustomSlider: UISlider {
         updateProgressLayer()
     }
     
-    private func updateProgressLayer() {
+    public func updateProgressLayer() {
         let progress = CGFloat((value - minimumValue) / (maximumValue - minimumValue))
         let progressWidth = progress * bounds.width
         
