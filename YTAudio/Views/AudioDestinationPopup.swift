@@ -8,7 +8,7 @@
 import UIKit
 
 class AudioDestinationPopup: UIViewController {
-    
+
     private lazy var tableView: UITableView = {
         let v = UITableView()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -19,10 +19,10 @@ class AudioDestinationPopup: UIViewController {
     }()
 
     private lazy var albumNamesList: [String] = {
-        return SystemFileService.getPlayList().map { $0.title }
+        return SystemFileService.getAlbumsList().map { $0.title }
     }()
-    
-    
+
+
     var pickedAudio: AudioModel {
         didSet {
             print(pickedAudio.title + " was picked")
@@ -39,11 +39,11 @@ class AudioDestinationPopup: UIViewController {
         self.pickedAudio = audio
         super.init(nibName: nil, bundle: nil)
     }
-    
+
     required init (coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     private func setupView() {
         view.backgroundColor = .black
         view.addSubview(tableView)
@@ -57,27 +57,59 @@ class AudioDestinationPopup: UIViewController {
             tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
+    
+    func getTopViewController() -> UIViewController? {
+        guard let window = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first?.windows
+            .first(where: { $0.isKeyWindow }) else { return nil }
+
+        var topVC = window.rootViewController
+        while let presentedVC = topVC?.presentedViewController {
+            topVC = presentedVC
+        }
+        return topVC
+    }
+}
+extension UIViewController {
+    // Extension pentru alertă reutilizabilă
+    func showSuccessAlert(for album: String) {
+        let alert = UIAlertController(
+            title: "Success",
+            message: "The audio file was successfully moved to album '\(album)'.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        DispatchQueue.main.async { [weak self] in
+            self?.present(alert, animated: true)
+        }
+    }
 }
 
 extension AudioDestinationPopup: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         albumNamesList.count
     }
-    
+
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell()
         cell.textLabel?.text = albumNamesList[indexPath.row]
         cell.textLabel?.textColor = .white
         cell.textLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
         cell.backgroundColor = .clear
-        cell.backgroundView?.backgroundColor = .clear   
+        cell.backgroundView?.backgroundColor = .clear
         return cell
     }
-    
+
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let selectedAlbum = albumNamesList[indexPath.row]
         SystemFileService.copyAudioFileToSelectedAlbum(audio: pickedAudio, albumName: selectedAlbum)
-        dismiss(animated: true)
+        // Dismiss view controller
+        dismiss(animated: true) {
+            if let topVC = self.getTopViewController() {
+                topVC.showSuccessAlert(for: selectedAlbum)
+            }
+        }
         print("Selected album for destination: \(selectedAlbum)")
     }
 }

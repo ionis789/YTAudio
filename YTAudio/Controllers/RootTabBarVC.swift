@@ -16,8 +16,8 @@ class RootTabBarVC: UITabBarController {
         UITabBar.appearance().tintColor = .myRed // Color for selected tab items
         UITabBar.appearance().unselectedItemTintColor = .gray // Color for unselected tab items
 
-        // Wrap PlayListVC inside a UINavigationController to enable a navigation bar
-        let albumVC = PlayListVC(albums: PlayListManager.getPlayList())
+        // Wrap AlbumsListVC inside a UINavigationController to enable a navigation bar
+        let albumVC = AlbumsListVC(albums: AppManager.getAlbumsList())
         let albumNavController = UINavigationController(rootViewController: albumVC)
         albumNavController.tabBarItem = UITabBarItem(title: "Albums", image: UIImage(systemName: "rectangle.stack"), tag: 0)
 

@@ -1,5 +1,5 @@
 //
-//  PlayListVC.swift
+//  AlbumsListVC.swift
 //  YTAudio
 //
 //  Created by Ion Socol on 11/10/24.
@@ -7,16 +7,16 @@
 
 import UIKit
 
-class PlayListVC: UIViewController {
+class AlbumsListVC: UIViewController {
 
     //MARK: Albums Array
-    var playList: [AlbumModel] {
+    var albumsList: [AlbumModel] {
         didSet {
             print("\(#file) didSet")
         }
     }
 
-    private lazy var playlistTableView: UITableView = {
+    private lazy var albumsListTableView: UITableView = {
         let v = UITableView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.dataSource = self
@@ -27,15 +27,18 @@ class PlayListVC: UIViewController {
         v.tableFooterView = UIView()
         return v
     }()
-    private lazy var headerTableView: UIView = {
-        let v = UIView()
+
+    private lazy var emptyAlbumsListLabel: UILabel = {
+        let v = UILabel()
         v.translatesAutoresizingMaskIntoConstraints = false
-        /**
-         In case need to check where is the position of  headerTableView
-         v.backgroundColor = .blue // Add a background color to make it visible
-         */
+        v.text = "Create your first album"
+        v.textColor = .white
+        v.textAlignment = .center
+        v.font = .systemFont(ofSize: 16, weight: .bold)
+        v.isHidden = true
         return v
     }()
+
     private lazy var createAlbumButton: UIBarButtonItem = {
         let v = UIBarButtonItem(title: "Create", style: .plain, target: self, action: #selector(didCreateAlbumTapped))
         v.tintColor = .myRed
@@ -53,17 +56,21 @@ class PlayListVC: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
+//        checkAlbumsList()
         ///Add Notification observer in case of creating new album
         /**
-         On viewDidLoad life cycle set listener for `reloadPlayListContent`
-         When I create new album `didCreateAlbumTapped` it's called and then i notifiy the NotificationCenter about `reloadPlayListContent event` so then inside a `requestToReloadPlayList` function I set `updated` PlayList to my `playList` array
+         On viewDidLoad life cycle set listener for `reloadAlbumsListContent`
+         When I create new album `didCreateAlbumTapped` it's called and then i notifiy the NotificationCenter about `reloadAlbumsListContent event` so then inside a `requestToReloadAlbumsList` function I set `updated` albumsList to my `albumsList` array
          */
-        NotificationCenter.default.addObserver(self, selector: #selector(self.requestToReloadPlayList), name: .reloadPlayListContent, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(requestToReloadAlbumsList), name: .reloadAlbumsListContent, object: nil)
     }
-
-    //MARK: Init PlayListVC with params
+    // Ascundem indicatorul Home
+    override var prefersHomeIndicatorAutoHidden: Bool {
+        return true
+    }
+    //MARK: Init AlbumsListVC with params
     init(albums: [AlbumModel]) {
-        self.playList = albums
+        self.albumsList = albums
         super.init(nibName: nil, bundle: nil)
     }
     required init?(coder: NSCoder) {
@@ -72,31 +79,52 @@ class PlayListVC: UIViewController {
 
     private func setupView() {
         /// Configure subviews ierarhi
-        [playlistTableView].forEach { view.addSubview($0) }
+        [albumsListTableView, emptyAlbumsListLabel].forEach { view.addSubview($0) }
         navigationItem.rightBarButtonItem = editAlbumsButton // assign edit button to tableview
         navigationItem.leftBarButtonItem = createAlbumButton // assign create button to tableview
 
         /// Add the createAlbumButtonView, editAlbumListLabel to the header
-//        [editAlbumsButton, createAlbumButton].forEach { headerTableView.addSubview($0) }
+        ///         [editAlbumsButton, createAlbumButton].forEach { headerTableView.addSubview($0) }
 
         setupConstraints()
     }
     @objc private func editAlbumsButtonTapped() {
-        playlistTableView.setEditing(!playlistTableView.isEditing, animated: true)
-        editAlbumsButton.title = playlistTableView.isEditing ? "Done" : "Edit" // Actualizează titlul
+        albumsListTableView.setEditing(!albumsListTableView.isEditing, animated: true)
+        editAlbumsButton.title = albumsListTableView.isEditing ? "Done" : "Edit" // Actualizează titlul
+    }
+    private func checkAlbumsList() {
+        if albumsList.isEmpty {
+            emptyAlbumsListLabel.isHidden = false
+            albumsListTableView.isHidden = true
+        } else {
+            emptyAlbumsListLabel.isHidden = true
+            albumsListTableView.isHidden = false
+        }
     }
     private func setupConstraints() {
         /**
          Constraints for the tableView.
          The top of tableView starts from safeAreaLayoutGuide and go to screen bottom, to avoid UI problems.
          */
+        if albumsList.isEmpty {
+            emptyAlbumsListLabel.isHidden = false
+            albumsListTableView.isHidden = true
 
+        } else {
+            emptyAlbumsListLabel.isHidden = true
+            albumsListTableView.isHidden = false
+        }
         NSLayoutConstraint.activate([
-            playlistTableView.topAnchor.constraint(equalTo: view.topAnchor),
-            playlistTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            playlistTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            playlistTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            albumsListTableView.topAnchor.constraint(equalTo: view.topAnchor),
+            albumsListTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            albumsListTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            albumsListTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
         ])
+        NSLayoutConstraint.activate([
+            emptyAlbumsListLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyAlbumsListLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
+
     }
 
     //MARK: createAlbum Alert
@@ -113,6 +141,7 @@ class PlayListVC: UIViewController {
             if let inputText = textField.text, !inputText.isEmpty {
                 /// If input isn't empty i create new album with this input
                 SystemFileService.createAlbum(albumName: inputText)
+                self.checkAlbumsList()
             } else {
                 /// In case of empty inputText show on screen another alert with warnning message
                 self.sayEmptyTextField()
@@ -124,10 +153,10 @@ class PlayListVC: UIViewController {
         present(alert, animated: true, completion: nil)
     }
 
-    /// Reload `playList` when new album has created
-    @objc private func requestToReloadPlayList() {
-        self.playList = SystemFileService.getPlayList()
-        playlistTableView.reloadData()
+    /// Reload `albumsList` when new album has created
+    @objc private func requestToReloadAlbumsList() {
+        self.albumsList = SystemFileService.getAlbumsList()
+        albumsListTableView.reloadData()
     }
     /// Text Field `validation`
     private func sayEmptyTextField() {
@@ -143,24 +172,25 @@ class PlayListVC: UIViewController {
 }
 
 
-extension PlayListVC: UITableViewDataSource, UITableViewDelegate {
+extension AlbumsListVC: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
 
             // Delete album from system file
             if indexPath.row >= 0 {
-                SystemFileService.deleteAlbum(atDir: playList[indexPath.row].title)
+                SystemFileService.deleteAlbum(atDir: albumsList[indexPath.row].title)
             }
 
             // Delete album from UI
-            print(playList[indexPath.row].title)
-            playList.remove(at: indexPath.row)
+            print("Deleted: ", albumsList[indexPath.row].title)
+            albumsList.remove(at: indexPath.row)
             tableView.deleteRows(at: [indexPath], with: .fade)
+            checkAlbumsList()
         }
     }
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print("\(playList[indexPath.row].title) Selected")
+        print("\(albumsList[indexPath.row].title) Selected")
         /**
          Primitive Deselect function
          guard let cell = tableView.cellForRow(at: indexPath) as? AlbumCell else { return }
@@ -169,7 +199,7 @@ extension PlayListVC: UITableViewDataSource, UITableViewDelegate {
 
         /// Swift provide `deselectRow - method for UITableView` witch deselects a row that an index path identifies, with an option to animate the deselection.
 
-        let vc = AlbumVC(album: playList[indexPath.row])
+        let vc = AlbumVC(album: albumsList[indexPath.row])
         navigationController?.pushViewController(vc, animated: true)
         tableView.deselectRow(at: indexPath, animated: true)
 
@@ -177,12 +207,12 @@ extension PlayListVC: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         /// `Custom cell` for tableView
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "albumCell", for: indexPath) as? AlbumCell else { return UITableViewCell() }
-        /// Each `cell` corespond to an album from `playListArray` (playList: [AlbumModel])
-        cell.album = playList[indexPath.row]
+        /// Each `cell` corespond to an album from `albumsListArray` (albumsList: [AlbumModel])
+        cell.album = albumsList[indexPath.row]
         return cell
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return playList.count
+        return albumsList.count
     }
 }

@@ -8,5 +8,6 @@
 import Foundation
 
 extension Notification.Name {
-    static let reloadPlayListContent = Notification.Name("reloadPlayListContent")
+    static let reloadAlbumsListContent = Notification.Name("reloadAlbumsListContent")
+    static let reloadAudiosListContent = Notification.Name("reloadAudiosListContent")
 }

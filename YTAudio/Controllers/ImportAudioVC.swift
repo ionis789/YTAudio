@@ -80,6 +80,9 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
         setupViews()
         setupDismissKeyboardGesture()
     }
+    override var prefersHomeIndicatorAutoHidden: Bool {
+        return true
+    }
 
     private func setupViews() {
         [importButton, orLabel, getAudioTextField, getAudioButton, fetchAudioActivityIndicator].forEach { view.addSubview($0) }
@@ -191,13 +194,14 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
                                     print("Error: \(error)")
                                     self.showAlert(title: "Error", message: "Error on trying download audio file from server.\n Please try again later.")
                                     self.fetchAudioActivityIndicator.stopAnimating()
+                                    self.getAudioTextField.text = ""
                                 }
                             }
 
                             if let tempURL = temporaryUrl {
                                 print("temporaryUrl", temporaryUrl ?? "Nothing in temporaryUrl")
                                 self.writeAudioData(audioData: tempURL, audioName: audioTitle)
-                                //MARK: Succesifuly moved audio and end all cycle
+                                //MARK: Succesifuly received audio data
                                 DispatchQueue.main.async {
                                     self.fetchAudioActivityIndicator.stopAnimating()
                                     self.getAudioTextField.text = ""
@@ -236,30 +240,47 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
         view.endEditing(true)
     }
 
+    private func generateUniqueFileName(for name: String, withExtension fileExtension: String, in directory: URL) -> URL {
+        var uniqueName = name
+        var count = 1
+        var uniqueURL = directory.appendingPathComponent("\(uniqueName).\(fileExtension)")
+
+        // Dacă fișierul există, generează un nume nou cu "(1)", "(2)", etc.
+        while FileManager.default.fileExists(atPath: uniqueURL.path) {
+            uniqueName = "\(name)(\(count))"
+            uniqueURL = directory.appendingPathComponent("\(uniqueName).\(fileExtension)")
+            count += 1
+        }
+
+        return uniqueURL
+    }
+
     private func writeAudioData(audioData: URL, audioName: String) {
 
         do {
-            // Create a destination URL to save the downloaded file
-            let docmunetsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            let destinationURL = docmunetsDirectory.appendingPathComponent(audioName + ".mp3")
+            // Definește directorul și numele fișierului
+            let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
 
+            // Generează un URL unic
+            let destinationURL = generateUniqueFileName(for: audioName, withExtension: "mp3", in: documentsDirectory)
+
+            // Mută fișierul la locația destinată
             try FileManager.default.moveItem(at: audioData, to: destinationURL)
 
             print("File saved to: \(destinationURL.path)")
 
             if let audio = SystemFileService.processPickedAudioURL(at: destinationURL) {
                 DispatchQueue.main.async {
-                    let destionation = AudioDestinationPopup(audio: audio)
-                    self.present(destionation, animated: true, completion: nil)
+                    let destination = AudioDestinationPopup(audio: audio)
+                    self.present(destination, animated: true, completion: nil)
                     print(audio.title)
                 }
             }
-
         } catch {
             print("Error saving audio file: \(error.localizedDescription)")
             DispatchQueue.main.async {
                 self.fetchAudioActivityIndicator.stopAnimating()
-                self.showAlert(title: "Error", message: "Failed to save audio file.")
+                self.showAlert(title: "Error", message: "Failed to save audio file. \n \(error.localizedDescription)")
             }
         }
     }
@@ -307,7 +328,7 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
             print("No audio selected")
             return
         }
-        /// If the audio file is successfully picked, it can be passed to the throw `AudioDestinationPopup`  to store the file in one of the album's playlists.
+        /// If the audio file is successfully picked, it can be passed throw `AudioDestinationPopup`  to store the file in one of the album's list.
         if let pickedAudio: AudioModel = SystemFileService.processPickedAudioURL(at: selectedAudioURL) {
             let audioDestinationPopup = AudioDestinationPopup(audio: pickedAudio)
             present(audioDestinationPopup, animated: true, completion: nil)

@@ -15,9 +15,9 @@ class AudioCell: UITableViewCell {
         didSet {
             if let audio = self.pickedAudio {
                 audioCover.image = audio.image ?? UIImage(named: "emptyAudio")
-                audionameLabel.text = audio.title.count > 15 ? audio.title.prefix(15) + "..." : audio.title
+                audionameLabel.text = audio.title.count > 20 ? audio.title.prefix(20) + "..." : audio.title
                 artistNameLabel.text = audio.artist
-                durationLabel.text = "Duration " + String(audio.duration)
+                durationLabel.text = String(Float(audio.duration / 60))
             }
         }
     }
@@ -43,16 +43,16 @@ class AudioCell: UITableViewCell {
     private lazy var artistNameLabel: UILabel = {
         let v = UILabel()
         v.translatesAutoresizingMaskIntoConstraints = false
-        v.font = .systemFont(ofSize: 12, weight: .medium)
-        v.textColor = .white
+        v.font = .systemFont(ofSize: 12, weight: .regular)
+        v.textColor = .lightGray
         return v
     }()
 
     private lazy var durationLabel: UILabel = {
         let v = UILabel()
         v.translatesAutoresizingMaskIntoConstraints = false
-        v.font = .systemFont(ofSize: 12, weight: .medium)
-        v.textColor = .white
+        v.font = .systemFont(ofSize: 12, weight: .bold)
+        v.textColor = .lightGray
         return v
     }()
 
@@ -120,6 +120,6 @@ class AudioCell: UITableViewCell {
     }
     override func layoutSubviews() {
         super.layoutSubviews()
-        audioCover.layer.cornerRadius = audioCover.frame.size.width / 2
+        audioCover.layer.cornerRadius = 10
     }
 }

@@ -47,7 +47,7 @@ class AudioMiniCell: UITableViewCell {
     }
     override func layoutSubviews() {
         super.layoutSubviews()
-        audioCover.layer.cornerRadius = audioCover.frame.size.width / 2
+        audioCover.layer.cornerRadius = 10
     }
     
     private func setupView() {

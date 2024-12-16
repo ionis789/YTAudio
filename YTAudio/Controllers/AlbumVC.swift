@@ -22,7 +22,7 @@ class AlbumVC: UIViewController {
         v.dataSource = self
         v.register(AudioCell.self, forCellReuseIdentifier: "audioCell")
         v.rowHeight = UITableView.automaticDimension
-        v.estimatedRowHeight = 200
+        v.estimatedRowHeight = 120
         v.tableFooterView = UIView()
         return v
     }()
@@ -34,10 +34,15 @@ class AlbumVC: UIViewController {
         v.numberOfLines = 0
         return v
     }()
-
+    private lazy var editAudiosButton: UIBarButtonItem = {
+        let v = UIBarButtonItem(title: "Edit", style: .plain, target: self, action: #selector(editAudiosButtonTapped))
+        v.tintColor = .myRed
+        return v
+    }()
     override func viewDidLoad() {
         super.viewDidLoad()
-            setupView()
+        setupView()
+        NotificationCenter.default.addObserver(self, selector: #selector(requestToReloadAudiosList), name: .reloadAudiosListContent, object: nil)
     }
 
     init(album: AlbumModel) {
@@ -50,6 +55,7 @@ class AlbumVC: UIViewController {
 
     private func setupView() {
         view.addSubview(albumTableView)
+        navigationItem.rightBarButtonItem = editAudiosButton
         setupContraints()
     }
     private func setupContraints() {
@@ -59,6 +65,14 @@ class AlbumVC: UIViewController {
             albumTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             albumTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
+    }
+    
+    @objc private func requestToReloadAudiosList() {
+       
+    }
+    
+    @objc private func editAudiosButtonTapped() {
+        
     }
 }
 extension AlbumVC: UITableViewDelegate, UITableViewDataSource {

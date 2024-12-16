@@ -12,7 +12,7 @@ class SystemFileService {
         dir -  directory
         dirs -  directories
      
-        The `PlayList` dir will be created in the Documents dir, the `PlayList` contain albums dirs. `PlayList ->
+        The `AlbumsList` dir will be created in the Documents dir, the `AlbumsList` contain albums dirs. `AlbumsList ->
                                                                                         `Album1 ->`
                                                                                             `Audio1`
                                                                                             `Audio2`
@@ -20,19 +20,19 @@ class SystemFileService {
                                                                                         `Album2 ->`
                                                                                             `Audio1`
                                                                                             `Audio2`
-        Each new created album inside`PlayList` will have its own dir, named after the album.
+        Each new created album inside`AlbumsList` will have its own dir, named after the album.
         Each album’s dir will contain `music files` in all audio formats supported by iOS System.
      */
 
     static func createAlbum(albumName: String) {
         let fileManager = FileManager.default
         guard let docURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        let newAlbumDir = docURL.appendingPathComponent("PlayList").appendingPathComponent(albumName)
+        let newAlbumDir = docURL.appendingPathComponent("AlbumsList").appendingPathComponent(albumName)
         ///Create new album dir
         do {
             try fileManager.createDirectory(atPath: newAlbumDir.path, withIntermediateDirectories: true)
-            /// Notify the `PlayListVC` via `PlayListManager` after creating a new album dir
-            NotificationCenter.default.post(name: .reloadPlayListContent, object: nil)
+            /// Notify the `AlbumsListVC` via `AppManager` after creating a new album dir
+            NotificationCenter.default.post(name: .reloadAlbumsListContent, object: nil)
         } catch {
             print("\(#file) Failed create album directory \(error.localizedDescription)")
         }
@@ -40,7 +40,7 @@ class SystemFileService {
 
     static func deleteAlbum(atDir albumName: String) {
         let fileManager = FileManager.default
-        if let albumDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("PlayList").appendingPathComponent(albumName) {
+        if let albumDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("AlbumsList").appendingPathComponent(albumName) {
             do {
                 if fileManager.fileExists(atPath: albumDir.path) {
                     try fileManager.removeItem(at: albumDir)
@@ -54,32 +54,32 @@ class SystemFileService {
         }
     }
 
-    static func getPlayList() -> [AlbumModel] {
+    static func getAlbumsList() -> [AlbumModel] {
         let fileManager = FileManager.default
         guard let docURl = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return [] }
-        let playListDir = docURl.appendingPathComponent("PlayList")
+        let albumsListDir = docURl.appendingPathComponent("AlbumsList")
 
-        if !fileManager.fileExists(atPath: playListDir.path) {
+        if !fileManager.fileExists(atPath: albumsListDir.path) {
             do {
                 /**
-                    If `PlayList dir` dosen't exist it mean that i have no other album dirs inside so I create the` PlayList dir` and return an `empty array`.
+                    If `AlbumsList dir` dosen't exist it mean that i have no other album dirs inside so I create the` AlbumsList dir` and return an `empty array`.
                  */
-                try fileManager.createDirectory(atPath: playListDir.path, withIntermediateDirectories: true)
+                try fileManager.createDirectory(atPath: albumsListDir.path, withIntermediateDirectories: true)
                 return []
             } catch {
                 print("\(#file) Failed create Albums directory \(error.localizedDescription)")
             }
         } else {
-            /// If I have `PlayList dir` already created, means that I may have some album dirs inside so i try to read content inside.
+            /// If I have `AlbumsList dir` already created, means that I may have some album dirs inside so i try to read content inside.
             do {
-                let playListContents = try fileManager.contentsOfDirectory(atPath: playListDir.path)
-                var albumsArray: [AlbumModel] = [] /// Initialize an empty array for `album dirs` in the current `PlayList` dir
+                let albumsListContent = try fileManager.contentsOfDirectory(atPath: albumsListDir.path)
+                var albumsArray: [AlbumModel] = [] /// Initialize an empty array for `album dirs` in the current `AlbumsList` dir
 
-                /// Iterate through `PlayList` in order to get `album dirs`
-                for album in playListContents {
+                /// Iterate through `AlbumsList` in order to get `album dirs`
+                for album in albumsListContent {
                     /// Check if the album has a prefix to exclude `wrong selections` such as `album` or `.DS_Store`, which is a hidden file generated by the macOS system.
                     if !album.hasPrefix(".") {
-                        let currentAlbumDir = playListDir.appendingPathComponent(album) /// Get album dir
+                        let currentAlbumDir = albumsListDir.appendingPathComponent(album) /// Get album dir
                         let currentAlbumName = currentAlbumDir.lastPathComponent /// Get album name
                         var audioArray: [AudioModel] = [] /// Init `audioArray` an empty array `to stock` audio files in the `current album dir`
 
@@ -102,15 +102,14 @@ class SystemFileService {
                         albumsArray.append(AlbumModel(title: currentAlbumName, songs: audioArray, cover: nil))
                     }
                 }
-                print("\(#file) PlayList contents: \(albumsArray)")
+                print("\(#file) AlbumsList content: \(albumsArray)")
                 return albumsArray
             } catch {
-                print("\(#file) Faield to get PlayList contents \(error.localizedDescription)")
+                print("\(#file) Faield to get AlbumsList content \(error.localizedDescription)")
             }
         }
         /// Return an empty array if nothing is returned for some reason. This might be a bug or an unexpected scenario, as all situations have been handled.
         return []
-
     }
 
 
@@ -122,7 +121,7 @@ class SystemFileService {
         let pickedAlbumDir = fileManager
             .urls(for: .documentDirectory, in: .userDomainMask)
             .first!
-            .appendingPathComponent("PlayList")
+            .appendingPathComponent("AlbumsList")
             .appendingPathComponent(albumName)
 
         /// Ensure the album directory exists
@@ -144,7 +143,7 @@ class SystemFileService {
 //                    audio.url.stopAccessingSecurityScopedResource()
 //                }
                 try fileManager.copyItem(at: audio.url, to: audioDestination)
-                NotificationCenter.default.post(name: .reloadPlayListContent, object: nil)
+            NotificationCenter.default.post(name: .reloadAlbumsListContent, object: nil)
                 print("Audio file moved successfully to \(audioDestination.path)")
 //            } else {
 //                print("Failed to access the file resource securely.")
