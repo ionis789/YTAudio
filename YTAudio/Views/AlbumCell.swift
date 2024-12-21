@@ -14,7 +14,7 @@ class AlbumCell: UITableViewCell {
         didSet {
             if let album = self.album {
                 albumName.text = album.title
-                albumSongsCount.text = "\(album.songs.count) Songs"
+                albumSongsCount.text = "\(album.audios.count) audios"
                 albumCover.image = album.cover ?? UIImage(named: "emptyAlbum")
             }
         }
@@ -58,6 +58,7 @@ class AlbumCell: UITableViewCell {
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupView()
+        NotificationCenter.default.addObserver(self, selector: #selector(removeAudio), name: .removeAudioFromAlbum, object: nil)
     }
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -73,8 +74,7 @@ class AlbumCell: UITableViewCell {
         ///Album Cover
         NSLayoutConstraint.activate([
             albumCover.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
-            albumCover.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            albumCover.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            albumCover.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             albumCover.widthAnchor.constraint(equalToConstant: 80),
             albumCover.heightAnchor.constraint(equalToConstant: 80),
         ])
@@ -87,6 +87,16 @@ class AlbumCell: UITableViewCell {
     }
     override func layoutSubviews() {
         super.layoutSubviews()
-        albumCover.layer.cornerRadius = albumCover.bounds.height / 2
+        albumCover.layer.cornerRadius = 16
+    }
+    @objc func removeAudio(_ notification: Notification) {
+        if let userInfo = notification.userInfo {
+            if let audioIndex = userInfo["audioIndex"] as? Int,
+                let albumName = userInfo["albumName"] as? String,
+                albumName == album?.title
+            {
+                album?.audios.remove(at: audioIndex)
+            }
+        }
     }
 }

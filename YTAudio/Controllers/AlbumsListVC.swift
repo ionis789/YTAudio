@@ -23,7 +23,7 @@ class AlbumsListVC: UIViewController {
         v.delegate = self
         v.register(AlbumCell.self, forCellReuseIdentifier: "albumCell")
         v.rowHeight = UITableView.automaticDimension
-        v.estimatedRowHeight = 90
+        v.rowHeight = 90
         v.tableFooterView = UIView()
         return v
     }()
@@ -63,6 +63,8 @@ class AlbumsListVC: UIViewController {
          When I create new album `didCreateAlbumTapped` it's called and then i notifiy the NotificationCenter about `reloadAlbumsListContent event` so then inside a `requestToReloadAlbumsList` function I set `updated` albumsList to my `albumsList` array
          */
         NotificationCenter.default.addObserver(self, selector: #selector(requestToReloadAlbumsList), name: .reloadAlbumsListContent, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(removeAudio), name: .removeAudioFromAlbum, object: nil)
+        print("View did load")
     }
     // Ascundem indicatorul Home
     override var prefersHomeIndicatorAutoHidden: Bool {
@@ -157,6 +159,19 @@ class AlbumsListVC: UIViewController {
     @objc private func requestToReloadAlbumsList() {
         self.albumsList = SystemFileService.getAlbumsList()
         albumsListTableView.reloadData()
+    }
+    @objc private func removeAudio(_ notification: Notification) {
+        if let userInfo = notification.userInfo {
+            if let audioIndex = userInfo["audioIndex"] as? Int, let albumName = userInfo["albumName"] as? String {
+                print("Trying remove audio with index: \(audioIndex) from album: \(albumName)")
+                if let albumIndex = albumsList.firstIndex(where: { $0.title == albumName }) {
+                    albumsList[albumIndex].audios.remove(at: audioIndex)
+                    print("Successfully removed audio from album \(albumName)")
+                } else {
+                    print("Could not remove audio beacuse album with name \(albumName) not found")
+                }
+            }
+        }
     }
     /// Text Field `validation`
     private func sayEmptyTextField() {

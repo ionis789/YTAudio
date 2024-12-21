@@ -9,6 +9,6 @@ import UIKit
 
 struct AlbumModel {
     var title: String
-    var songs: [AudioModel]
+    var audios: [AudioModel]
     var cover: UIImage?
 }

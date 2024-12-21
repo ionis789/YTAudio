@@ -328,13 +328,43 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
             print("No audio selected")
             return
         }
-        /// If the audio file is successfully picked, it can be passed throw `AudioDestinationPopup`  to store the file in one of the album's list.
-        if let pickedAudio: AudioModel = SystemFileService.processPickedAudioURL(at: selectedAudioURL) {
-            let audioDestinationPopup = AudioDestinationPopup(audio: pickedAudio)
-            present(audioDestinationPopup, animated: true, completion: nil)
-            print(pickedAudio.title)
-        } else {
-            print("Could not process selected audio file.")
+
+        // Începe accesarea resursei securizate
+        guard selectedAudioURL.startAccessingSecurityScopedResource() else {
+            print("Could not access secured resource.")
+            return
+        }
+
+        defer {
+            // Închide accesarea securizată după terminarea procesării
+            selectedAudioURL.stopAccessingSecurityScopedResource()
+        }
+
+        // Salvează fișierul în directorul aplicației
+        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let destinationURL = documentsDirectory.appendingPathComponent(selectedAudioURL.lastPathComponent)
+
+        do {
+            // Dacă fișierul deja există, îl ștergem pentru a-l suprascrie
+            if FileManager.default.fileExists(atPath: destinationURL.path) {
+                try FileManager.default.removeItem(at: destinationURL)
+            }
+            // Copiem fișierul în directorul aplicației
+            try FileManager.default.copyItem(at: selectedAudioURL, to: destinationURL)
+
+            print("File copied to: \(destinationURL.path)")
+
+            // Procesăm fișierul copiat
+            if let pickedAudio: AudioModel = SystemFileService.processPickedAudioURL(at: destinationURL) {
+                let audioDestinationPopup = AudioDestinationPopup(audio: pickedAudio)
+                present(audioDestinationPopup, animated: true, completion: nil)
+                print("Audio Processed: \(pickedAudio.title)")
+            } else {
+                print("Could not process the selected audio file.")
+            }
+
+        } catch {
+            print("Failed to copy audio file: \(error.localizedDescription)")
         }
     }
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {

@@ -9,13 +9,15 @@ import UIKit
 
 class AlbumVC: UIViewController {
 
-    var albumAudio: [AudioModel] {
+    var audiosAlbum: [AudioModel] {
         didSet {
-            print("\(#file) didSet")
+            print("\(#file) audiosAlbum didSet")
         }
     }
 
-    private lazy var albumTableView: UITableView = {
+    var albumTitle: String
+
+    private lazy var audiosAlbumTableView: UITableView = {
         let v = UITableView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.delegate = self
@@ -42,11 +44,11 @@ class AlbumVC: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
-        NotificationCenter.default.addObserver(self, selector: #selector(requestToReloadAudiosList), name: .reloadAudiosListContent, object: nil)
     }
 
     init(album: AlbumModel) {
-        self.albumAudio = album.songs
+        self.audiosAlbum = album.audios
+        self.albumTitle = album.title
         super.init(nibName: nil, bundle: nil)
     }
     required init?(coder: NSCoder) {
@@ -54,41 +56,53 @@ class AlbumVC: UIViewController {
     }
 
     private func setupView() {
-        view.addSubview(albumTableView)
+        view.addSubview(audiosAlbumTableView)
         navigationItem.rightBarButtonItem = editAudiosButton
         setupContraints()
     }
     private func setupContraints() {
         NSLayoutConstraint.activate([
-            albumTableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            albumTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            albumTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            albumTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            audiosAlbumTableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            audiosAlbumTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            audiosAlbumTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            audiosAlbumTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
-    
-    @objc private func requestToReloadAudiosList() {
-       
-    }
-    
+
+
+
     @objc private func editAudiosButtonTapped() {
-        
+        audiosAlbumTableView.setEditing(!audiosAlbumTableView.isEditing, animated: true)
+        editAudiosButton.title = audiosAlbumTableView.isEditing ? "Done" : "Edit"
     }
 }
 extension AlbumVC: UITableViewDelegate, UITableViewDataSource {
+
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            let index = indexPath.row
+            SystemFileService.deleteAudio(audioName: audiosAlbum[index].title, from: albumTitle)
+            audiosAlbum.remove(at: index)
+            audiosAlbumTableView.deleteRows(at: [indexPath], with: .fade)
+            NotificationCenter.default.post(name: .removeAudioFromAlbum, object: nil, userInfo: ["albumName": albumTitle, "audioIndex": index])
+
+        }
+    }
+
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print(albumAudio[indexPath.row].title)
-        let popupVC = MediaPlayerVC(album: albumAudio, pickedAudioIndex: indexPath.row)
+        print(audiosAlbum[indexPath.row].title)
+        let popupVC = MediaPlayerVC(album: audiosAlbum, pickedAudioIndex: indexPath.row)
         present(popupVC, animated: true)
         tableView.deselectRow(at: indexPath, animated: true)
     }
+
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "audioCell", for: indexPath) as? AudioCell else { return UITableViewCell() }
-        cell.pickedAudio = albumAudio[indexPath.row]
+        cell.pickedAudio = audiosAlbum[indexPath.row]
         return cell
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        albumAudio.count
+        audiosAlbum.count
     }
 }

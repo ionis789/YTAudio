@@ -38,6 +38,97 @@ class SystemFileService {
         }
     }
 
+    static func getAlbum(withName albumName: String) -> AlbumModel {
+        let fileManager = FileManager.default
+
+        /// Get Album Folder Path
+        guard let albumDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("AlbumsList")
+            .appendingPathComponent(albumName)
+            else {
+            return AlbumModel(title: albumName, audios: [])
+        }
+        var audiosArray: [AudioModel] = []
+
+        /// Check if Album Folder Path exist in file system
+        if !fileManager.fileExists(atPath: albumDir.path) {
+            do {
+                try fileManager.createDirectory(at: albumDir, withIntermediateDirectories: true)
+                return AlbumModel(title: albumName, audios: [])
+
+            } catch {
+                print("\(#filePath) Failed create Album Directory \(error.localizedDescription)")
+            }
+
+        } else {
+            /// If I have `Album dir` already created, means that I may have some audios, so i try to read content inside.
+
+
+
+            do {
+                // Is foder is empty return empty audio array
+                if try fileManager.contentsOfDirectory(atPath: albumDir.path).isEmpty {
+                    return AlbumModel(title: albumName, audios: [])
+                }
+
+                let albumContent = try fileManager.contentsOfDirectory(atPath: albumDir.path)
+
+
+                for audio in albumContent {
+                    let audioURL = albumDir.appendingPathComponent(audio)
+                    let audio = self.processPickedAudioURL(at: audioURL)
+                    audiosArray.append(audio ?? AudioModel(title: "Unknown", artist: "Unknown", duration: 0.0, url: audioURL, image: nil))
+                }
+
+            } catch {
+                print("\(#filePath) Failed to get content of album: \(albumName), \(error.localizedDescription)")
+            }
+
+        }
+        return AlbumModel(title: albumName, audios: audiosArray)
+
+    }
+
+    static func deleteAudio(audioName: String, from albumName: String) {
+        let fileManager = FileManager.default
+
+        // Construct the directory path for the album
+        guard let albumDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask)
+            .first?.appendingPathComponent("AlbumsList")
+            .appendingPathComponent(albumName) else {
+            print("\(#file): Failed to construct album directory URL.")
+            return
+        }
+
+        // Check if the album directory exists
+        guard fileManager.fileExists(atPath: albumDir.path) else {
+            print("\(#file): Album directory does not exist at: \(albumDir.path)")
+            return
+        }
+
+        do {
+            // List all files in the directory
+            let files = try fileManager.contentsOfDirectory(atPath: albumDir.path)
+
+            // Look for a matching file
+            guard let matchingFile = files.first(where: { $0.hasPrefix(audioName) }) else {
+                print("\(#file): No matching audio file found for name: \(audioName)")
+                return
+            }
+
+            // Construct the full path of the matching file
+            let audioFileURL = albumDir.appendingPathComponent(matchingFile)
+
+            print("Found matching file: \(audioFileURL.path)")
+
+            // Delete the file
+            try fileManager.removeItem(at: audioFileURL)
+            print("Audio file deleted successfully.")
+
+        } catch {
+            print("Error accessing or deleting audio file: \(error.localizedDescription)")
+        }
+    }
+
     static func deleteAlbum(atDir albumName: String) {
         let fileManager = FileManager.default
         if let albumDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("AlbumsList").appendingPathComponent(albumName) {
@@ -50,7 +141,7 @@ class SystemFileService {
                 return
             }
         } else {
-            print("Failed to locate the album directory.")
+            print("\(#file): Failed to locate the album directory.")
         }
     }
 
@@ -67,7 +158,7 @@ class SystemFileService {
                 try fileManager.createDirectory(atPath: albumsListDir.path, withIntermediateDirectories: true)
                 return []
             } catch {
-                print("\(#file) Failed create Albums directory \(error.localizedDescription)")
+                print("\(#filePath) Failed create Albums Directory \(error.localizedDescription)")
             }
         } else {
             /// If I have `AlbumsList dir` already created, means that I may have some album dirs inside so i try to read content inside.
@@ -99,7 +190,7 @@ class SystemFileService {
                         }
 
                         /// Apend album to albumsArray
-                        albumsArray.append(AlbumModel(title: currentAlbumName, songs: audioArray, cover: nil))
+                        albumsArray.append(AlbumModel(title: currentAlbumName, audios: audioArray, cover: nil))
                     }
                 }
                 print("\(#file) AlbumsList content: \(albumsArray)")
@@ -142,9 +233,9 @@ class SystemFileService {
 //                defer {
 //                    audio.url.stopAccessingSecurityScopedResource()
 //                }
-                try fileManager.copyItem(at: audio.url, to: audioDestination)
+            try fileManager.copyItem(at: audio.url, to: audioDestination)
             NotificationCenter.default.post(name: .reloadAlbumsListContent, object: nil)
-                print("Audio file moved successfully to \(audioDestination.path)")
+            print("Audio file moved successfully to \(audioDestination.path)")
 //            } else {
 //                print("Failed to access the file resource securely.")
 //            }
@@ -153,39 +244,41 @@ class SystemFileService {
         }
     }
 
-    ///Extract all `metaData` from audio file
+    /// Extract all `metaData` from an audio file.
     static func processPickedAudioURL(at url: URL) -> AudioModel? {
+        // Ensure the file exists
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            print("Audio file does not exist at URL: \(url.path)")
+            return nil
+        }
 
-        /// Extracts the `title` from the selected audio file. If the file has no title, it is considered invalid, and the method returns `nil`.
+        // Extract the title
         guard let title = url.lastPathComponent.split(separator: ".").first else {
             print("Could not extract title from file name")
             return nil
         }
 
-        ///Create an asset for `audio metadata analysis`
+        // Create an asset for `audio metadata analysis`
         let audioAsset = AVURLAsset(url: url)
 
-        /// Extract duration
+        // Extract duration
         let duration: TimeInterval = audioAsset.duration.seconds
-
-        /// Extract artist name (if available)
-        let artist: String = audioAsset.metadata.first(where: { $0.commonKey?.rawValue == "artist" })?.value as? String ?? "Unknown"
-
-        /// Extract the audio image (if available)
-        var audioImage: UIImage?
-        if let audioImageData = audioAsset.metadata.first(where: { $0.commonKey?.rawValue == "artwork" })?.value as? Data {
-            audioImage = UIImage(data: audioImageData)
-        }
-
-        /// Extracts the `duration` from the selected audio file. If the file has `invalid duration`,  return `nil`.
-        guard duration.isFinite && duration > 0 else {
-            print("Error in extracting duration")
+        guard duration > 0 else {
+            print("Invalid or zero duration in audio file")
             return nil
         }
 
-        /// If `all cases` have been `passed successfully`, it means a valid `AudioModel` has been created, which can now be returned.
-        return AudioModel(title: String(title), artist: artist, duration: duration, url: url, image: audioImage ?? nil)
+        // Extract artist name (if available)
+        let artist = audioAsset.metadata.first(where: { $0.commonKey?.rawValue == AVMetadataKey.commonKeyArtist.rawValue })?.value as? String ?? "Unknown"
 
+        // Extract the audio image (if available)
+        var audioImage: UIImage?
+        if let audioImageData = audioAsset.metadata.first(where: { $0.commonKey?.rawValue == AVMetadataKey.commonKeyArtwork.rawValue })?.value as? Data {
+            audioImage = UIImage(data: audioImageData)
+        }
+
+        // Successfully return the constructed `AudioModel`
+        return AudioModel(title: String(title), artist: artist, duration: duration, url: url, image: audioImage)
     }
 }
 

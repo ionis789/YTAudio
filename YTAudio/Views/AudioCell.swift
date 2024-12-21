@@ -100,10 +100,7 @@ class AudioCell: UITableViewCell {
     private func setupConstraints() {
         // Image constraints
         NSLayoutConstraint.activate([
-            // Imaginea se ancorează complet de contentView cu padding
-            audioCover.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            audioCover.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
-            audioCover.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            audioCover.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             audioCover.widthAnchor.constraint(lessThanOrEqualToConstant: 60),
             audioCover.heightAnchor.constraint(lessThanOrEqualToConstant: 60),
         ])
