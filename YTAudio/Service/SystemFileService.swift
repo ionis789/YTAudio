@@ -32,7 +32,7 @@ class SystemFileService {
         do {
             try fileManager.createDirectory(atPath: newAlbumDir.path, withIntermediateDirectories: true)
             /// Notify the `AlbumsListVC` via `AppManager` after creating a new album dir
-            NotificationCenter.default.post(name: .reloadAlbumsListContent, object: nil)
+            NotificationCenter.default.post(name: .reloadAlbumListContent, object: nil)
         } catch {
             print("\(#file) Failed create album directory \(error.localizedDescription)")
         }
@@ -234,7 +234,9 @@ class SystemFileService {
 //                    audio.url.stopAccessingSecurityScopedResource()
 //                }
             try fileManager.copyItem(at: audio.url, to: audioDestination)
-            NotificationCenter.default.post(name: .reloadAlbumsListContent, object: nil)
+            /// If i was on the AlbumList Page the `reloadAlbumListContent` will be trigered other wise if i am on AudioList Page the `reloadAudioListContent` will be trigered 
+            NotificationCenter.default.post(name: .reloadAlbumListContent, object: nil)
+            NotificationCenter.default.post(name: .reloadAudioListContent, object: nil)
             print("Audio file moved successfully to \(audioDestination.path)")
 //            } else {
 //                print("Failed to access the file resource securely.")

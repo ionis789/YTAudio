@@ -58,7 +58,7 @@ class AlbumCell: UITableViewCell {
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupView()
-        NotificationCenter.default.addObserver(self, selector: #selector(removeAudio), name: .removeAudioFromAlbum, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(removeAudio), name: .didRemoveAudioFromAlbum, object: nil)
     }
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")

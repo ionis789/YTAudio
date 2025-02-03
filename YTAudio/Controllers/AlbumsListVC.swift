@@ -62,11 +62,10 @@ class AlbumsListVC: UIViewController {
          On viewDidLoad life cycle set listener for `reloadAlbumsListContent`
          When I create new album `didCreateAlbumTapped` it's called and then i notifiy the NotificationCenter about `reloadAlbumsListContent event` so then inside a `requestToReloadAlbumsList` function I set `updated` albumsList to my `albumsList` array
          */
-        NotificationCenter.default.addObserver(self, selector: #selector(requestToReloadAlbumsList), name: .reloadAlbumsListContent, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(removeAudio), name: .removeAudioFromAlbum, object: nil)
-        print("View did load")
+        NotificationCenter.default.addObserver(self, selector: #selector(requestToReloadAlbumList), name: .reloadAlbumListContent, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(removeAudio), name: .didRemoveAudioFromAlbum, object: nil)
     }
-    // Ascundem indicatorul Home
+    // Hide home indicator
     override var prefersHomeIndicatorAutoHidden: Bool {
         return true
     }
@@ -156,7 +155,7 @@ class AlbumsListVC: UIViewController {
     }
 
     /// Reload `albumsList` when new album has created
-    @objc private func requestToReloadAlbumsList() {
+    @objc private func requestToReloadAlbumList() {
         self.albumsList = SystemFileService.getAlbumsList()
         albumsListTableView.reloadData()
     }

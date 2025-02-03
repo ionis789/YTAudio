@@ -38,6 +38,7 @@ class AudioDestinationPopup: UIViewController {
     init(audio: AudioModel) {
         self.pickedAudio = audio
         super.init(nibName: nil, bundle: nil)
+        //NotificationCenter.default.addObserver(self, selector: #selector(), name: .reloadAudioListContent, object: nil)
     }
 
     required init (coder: NSCoder) {
@@ -57,7 +58,7 @@ class AudioDestinationPopup: UIViewController {
             tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
-    
+
     func getTopViewController() -> UIViewController? {
         guard let window = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
@@ -72,11 +73,10 @@ class AudioDestinationPopup: UIViewController {
     }
 }
 extension UIViewController {
-    // Extension pentru alertă reutilizabilă
-    func showSuccessAlert(for album: String) {
+    func showSuccessAlert(for album: String, with audio: String) {
         let alert = UIAlertController(
             title: "Success",
-            message: "The audio file was successfully moved to album '\(album)'.",
+            message: "\(audio) was successfully moved to \(album).",
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
@@ -107,7 +107,7 @@ extension AudioDestinationPopup: UITableViewDelegate, UITableViewDataSource {
         // Dismiss view controller
         dismiss(animated: true) {
             if let topVC = self.getTopViewController() {
-                topVC.showSuccessAlert(for: selectedAlbum)
+                topVC.showSuccessAlert(for: selectedAlbum, with: self.pickedAudio.title)
             }
         }
         print("Selected album for destination: \(selectedAlbum)")

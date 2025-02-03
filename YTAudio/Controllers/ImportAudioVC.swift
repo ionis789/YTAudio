@@ -132,7 +132,7 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
             return
         }
 
-        let serverURLStringFormat = "https://g5fm5s6l-3000.euw.devtunnels.ms/extract-audio?url=\(textFieldURL)"
+        let serverURLStringFormat = "http://localhost:3000/extract-audio?url=\(textFieldURL)"
 
         guard let serverURL = URL(string: serverURLStringFormat) else {
             showAlert(title: "Error", message: "Invalid URL format. Please check again.")
@@ -180,7 +180,7 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
                         print("Audio title: \(audioTitle)")
                         print("Audio download URL: \(audioDownloadURL)")
                         // Create new task for download data from audioDownloadURL
-                        let downloadAudioURLStringFormat = "https://g5fm5s6l-3000.euw.devtunnels.ms" + audioDownloadURL
+                        let downloadAudioURLStringFormat = "http://localhost:3000" + audioDownloadURL
                         let downloadAudioURL = URL(string: downloadAudioURLStringFormat)!
 
                         let session = URLSession.shared
@@ -215,9 +215,9 @@ class ImportAudioVC: UIViewController, UIDocumentPickerDelegate {
                 }
 
             } catch {
-                print("Error parsing JSON: \(error.localizedDescription)")
+                print("Error parsing JSON(Server iobanîi): \(error.localizedDescription)")
                 DispatchQueue.main.async {
-                    self.showAlert(title: "Error", message: "Something went wrong when parsing JSON.\n Please try again later.")
+                    self.showAlert(title: "Error", message: "Something went wrong when receiving data from server.\n Please try again later or pick other link.")
                     self.fetchAudioActivityIndicator.stopAnimating()
                 }
             }

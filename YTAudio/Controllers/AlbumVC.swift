@@ -9,9 +9,9 @@ import UIKit
 
 class AlbumVC: UIViewController {
 
-    var audiosAlbum: [AudioModel] {
+    var audios: [AudioModel] {
         didSet {
-            print("\(#file) audiosAlbum didSet")
+            print("\(#file) audios from album: \(self.albumTitle) didSet")
         }
     }
 
@@ -44,10 +44,11 @@ class AlbumVC: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
+        NotificationCenter.default.addObserver(self, selector: #selector(requestToReloadAudioList), name: .reloadAudioListContent, object: nil)
     }
 
     init(album: AlbumModel) {
-        self.audiosAlbum = album.audios
+        self.audios = album.audios
         self.albumTitle = album.title
         super.init(nibName: nil, bundle: nil)
     }
@@ -75,34 +76,38 @@ class AlbumVC: UIViewController {
         audiosAlbumTableView.setEditing(!audiosAlbumTableView.isEditing, animated: true)
         editAudiosButton.title = audiosAlbumTableView.isEditing ? "Done" : "Edit"
     }
+    @objc private func requestToReloadAudioList() {
+        self.audios = SystemFileService.getAlbum(withName: albumTitle).audios
+        audiosAlbumTableView.reloadData()
+    }
 }
 extension AlbumVC: UITableViewDelegate, UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
             let index = indexPath.row
-            SystemFileService.deleteAudio(audioName: audiosAlbum[index].title, from: albumTitle)
-            audiosAlbum.remove(at: index)
+            SystemFileService.deleteAudio(audioName: audios[index].title, from: albumTitle)
+            audios.remove(at: index)
             audiosAlbumTableView.deleteRows(at: [indexPath], with: .fade)
-            NotificationCenter.default.post(name: .removeAudioFromAlbum, object: nil, userInfo: ["albumName": albumTitle, "audioIndex": index])
+            NotificationCenter.default.post(name: .didRemoveAudioFromAlbum, object: nil, userInfo: ["albumName": albumTitle, "audioIndex": index])
 
         }
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print(audiosAlbum[indexPath.row].title)
-        let popupVC = MediaPlayerVC(album: audiosAlbum, pickedAudioIndex: indexPath.row)
+        print(audios[indexPath.row].title)
+        let popupVC = MediaPlayerVC(album: audios, pickedAudioIndex: indexPath.row)
         present(popupVC, animated: true)
         tableView.deselectRow(at: indexPath, animated: true)
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "audioCell", for: indexPath) as? AudioCell else { return UITableViewCell() }
-        cell.pickedAudio = audiosAlbum[indexPath.row]
+        cell.pickedAudio = audios[indexPath.row]
         return cell
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        audiosAlbum.count
+        audios.count
     }
 }
