@@ -1,18 +1,12 @@
-//
-//  MediaPlayerVC.swift
-//  YTAudio
-//
-//  Created by Ion Socol on 11/24/24.
-//
-
 import UIKit
 import AVFoundation
 import MediaPlayer
+
 class MediaPlayerVC: UIViewController {
 
-    //MARK: Propreties
+    //MARK: Properties
 
-    ///Album array
+    /// Album array
     var album: [AudioModel]
     var pickedAudioIndex: Int? {
         didSet {
@@ -27,10 +21,10 @@ class MediaPlayerVC: UIViewController {
     }
     /// Stock played audio indexes
     var playedIndexes: [Int] = []
-    ///Player
+    /// Player
     var audioPlayer: AVAudioPlayer?
 
-    /// `Timer` playback for `synhronization` betwen audio play time and slider position
+    /// `Timer` playback for `synchronization` between audio play time and slider position
     var playBackTimer: Timer?
 
     /// Indicate if audio `is playing` right now or not
@@ -45,7 +39,7 @@ class MediaPlayerVC: UIViewController {
         didSet {
             updateShuffleButtonAppearance()
         }
-    } // check if for all album is acivated random playback
+    } // check if for all album is activated random playback
     var isSeeking = false // track slider change
 
     //MARK: Views
@@ -69,17 +63,17 @@ class MediaPlayerVC: UIViewController {
         v.layer.cornerRadius = 20
         v.clipsToBounds = true
 
-        // Creează fundalul cu gradient (cețos) al imaginii
+        // Create gradient background for the image
         let gradientLayer = CAGradientLayer()
         gradientLayer.frame = v.bounds
         gradientLayer.colors = [
-            UIColor.white.withAlphaComponent(0.6).cgColor, // Alb transparent
-            UIColor.gray.withAlphaComponent(0.4).cgColor // Gri transparent
+            UIColor.white.withAlphaComponent(0.6).cgColor, // White transparent
+            UIColor.gray.withAlphaComponent(0.4).cgColor // Gray transparent
         ]
         gradientLayer.startPoint = CGPoint(x: 0.5, y: 0)
         gradientLayer.endPoint = CGPoint(x: 0.5, y: 1)
 
-        v.layer.addSublayer(gradientLayer) // Adaugă gradientul ca sub-layer
+        v.layer.addSublayer(gradientLayer) // Add gradient as sub-layer
 
         return v
     }()
@@ -90,11 +84,11 @@ class MediaPlayerVC: UIViewController {
         v.minimumValue = 0
         // Track user interaction with audio
         /// On `sliderTouchBegan` event `isSeeking = true`(indicate that user start interact with slider)
-        /// On `sliderValueChanged` event `update(synchronize)` audio curent time with slider value
-        /// On `sliderTouchEnded` event `isSeeking = false` (indicate that user stoped interact with slider)
+        /// On `sliderValueChanged` event `update(synchronize)` audio current time with slider value
+        /// On `sliderTouchEnded` event `isSeeking = false` (indicate that user stopped interact with slider)
         v.addTarget(self, action: #selector(sliderTouchBegan(_:)), for: .touchDown)
-        v.addTarget(self, action: #selector (sliderValueChanged(_:)), for: .valueChanged)
-        v.addTarget(self, action: #selector (sliderTouchEnded(_:)), for: .touchUpInside)
+        v.addTarget(self, action: #selector(sliderValueChanged(_:)), for: .valueChanged)
+        v.addTarget(self, action: #selector(sliderTouchEnded(_:)), for: .touchUpInside)
         return v
     }()
 
@@ -104,7 +98,7 @@ class MediaPlayerVC: UIViewController {
         let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .semibold)
         v.setImage(UIImage(systemName: "chevron.left", withConfiguration: config), for: .normal)
         v.tintColor = .myRed
-        v.addTarget(self, action: #selector (previousAudioButtonTapped), for: .touchUpInside)
+        v.addTarget(self, action: #selector(previousAudioButtonTapped), for: .touchUpInside)
         return v
     }()
 
@@ -136,7 +130,7 @@ class MediaPlayerVC: UIViewController {
             trailing: 25
         )
         v.configuration = config
-        v.addTarget(self, action: #selector(togglePlayPlauseButton), for: .touchUpInside)
+        v.addTarget(self, action: #selector(togglePlayPauseButton), for: .touchUpInside)
         return v
     }()
 
@@ -196,17 +190,18 @@ class MediaPlayerVC: UIViewController {
         return v
     }()
 
-// MARK: Init Life cycle
+    // MARK: Init Life cycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
         updatePlayBackTimer()
+        setupRemoteTransportControls()
     }
     override var prefersHomeIndicatorAutoHidden: Bool {
         return true
     }
 
-//MARK: Init audio file into player
+    //MARK: Init audio file into player
     init(album: [AudioModel], pickedAudioIndex: Int) {
         self.album = album
         super.init(nibName: nil, bundle: nil)
@@ -218,12 +213,11 @@ class MediaPlayerVC: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
-//MARK: Clean up all data of Media Player on deinit
+    //MARK: Clean up all data of Media Player on deinit
     deinit {
         cleanupPlayer()
         print("AudioPlayerVC: Deinitialized.")
     }
-
 
     // Configure audio player for background playing features
     private func configureAudioSession() {
@@ -243,7 +237,6 @@ class MediaPlayerVC: UIViewController {
         playBackTimer?.invalidate()
         playBackTimer = nil
         print("AudioPlayerVC: Player resources cleaned up.")
-
     }
     //MARK: init player
     private func playerInitForCurrentPickedAudioIndex() {
@@ -254,11 +247,14 @@ class MediaPlayerVC: UIViewController {
             self.audioPlayer?.play()
             isAudioPlaying = true
 
-            //Init slider
+            // Init slider
             audioSlider.minimumValue = 0
             audioSlider.maximumValue = Float(audioPlayer?.duration ?? 0)
             audioSlider.value = 0 // Reset to the start position
             audioSlider.updateProgressLayer() // Refresh UI for the slider
+
+            // Set now playing info
+            setNowPlayingInfo()
         } catch {
             print("Error initializing audioPlayer: \(#file), \(error)")
         }
@@ -307,20 +303,10 @@ class MediaPlayerVC: UIViewController {
             audioSliderControlStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             audioSliderControlStack.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.9),
             audioSlider.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.8),
-
-
-//            audioSlider.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
-//            audioSlider.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.7),
-//            audioSlider.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: -16),
-//
-//            loopAudioButton.leadingAnchor.constraint(equalTo: audioSlider.trailingAnchor, constant: 8),
-//            loopAudioButton.bottomAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20)
         ])
     }
 
-
-
-    // Call this function when audioPlayer.isPlaying proprety is changed in didSet
+    // Call this function when audioPlayer.isPlaying property is changed in didSet
     private func updatePLayPauseButtonUI() {
         let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .bold)
         let image = isAudioPlaying ? UIImage(systemName: "pause", withConfiguration: config) : UIImage(systemName: "play", withConfiguration: config)
@@ -344,16 +330,16 @@ class MediaPlayerVC: UIViewController {
         }
     }
 
-    // Actualizează apariția butonului în funcție de isShuffle
+    // Update the appearance of the shuffle button based on isShuffle
     private func updateShuffleButtonAppearance() {
         var config = shuffleButton.configuration ?? UIButton.Configuration.plain()
 
         if isShuffle {
-            // Stil când shuffle este activ
+            // Style when shuffle is active
             config.background.backgroundColor = .myRed
             config.baseForegroundColor = .white
         } else {
-            // Stil când shuffle este inactiv
+            // Style when shuffle is inactive
             config.background.backgroundColor = .myDarkGray
             config.baseForegroundColor = .myRed
         }
@@ -378,9 +364,7 @@ class MediaPlayerVC: UIViewController {
         if let randomIndex = remainingIndexes.randomElement() {
             self.pickedAudioIndex = randomIndex
             playedIndexes.append(randomIndex)
-
         }
-
     }
 
     @objc func shuffleAlbum() {
@@ -394,7 +378,7 @@ class MediaPlayerVC: UIViewController {
         let config = UIImage.SymbolConfiguration(pointSize: 18, weight: .bold)
         loopAudioButton.setImage(isLoop ? UIImage(systemName: "repeat.1", withConfiguration: config) : UIImage(systemName: "repeat", withConfiguration: config), for: .normal)
     }
-    @objc func togglePlayPlauseButton() {
+    @objc func togglePlayPauseButton() {
         if isAudioPlaying {
             audioPlayer?.pause()
         } else {
@@ -405,11 +389,12 @@ class MediaPlayerVC: UIViewController {
 
     private func updatePlayBackTimer() {
         playBackTimer?.invalidate()
-        //Weak refernce to avoid hold MediaPlayerVC when close popup
+        // Weak reference to avoid holding MediaPlayerVC when close popup
         playBackTimer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { [weak self] _ in
             guard let self = self else { return }
-            audioSlider.value = Float(self.audioPlayer?.currentTime ?? 0)
-            audioSlider.updateProgressLayer()
+            self.audioSlider.value = Float(self.audioPlayer?.currentTime ?? 0)
+            self.audioSlider.updateProgressLayer()
+            self.setNowPlayingInfo() // Update now playing info
         }
     }
     @objc private func changeSliderPosition() {
@@ -417,13 +402,14 @@ class MediaPlayerVC: UIViewController {
         print(audioSlider.value)
     }
 
-    //MARK: Change slider position acording to audio playing time
+    //MARK: Change slider position according to audio playing time
     @objc func sliderValueChanged(_ sender: UISlider) {
         audioPlayer?.currentTime = TimeInterval(sender.value)
         if isSeeking {
             print("isSeeking \(sender.value)")
         }
         print(sender.value)
+        setNowPlayingInfo() // Update now playing info
     }
     @objc func sliderTouchBegan(_ sender: UISlider) {
         isSeeking = true;
@@ -436,6 +422,67 @@ class MediaPlayerVC: UIViewController {
         isAudioPlaying = true
         if isAudioPlaying { audioPlayer?.play() }
         else { audioPlayer?.pause() }
+    }
+
+    //MARK: Setup Remote Transport Controls
+    private func setupRemoteTransportControls() {
+        let commandCenter = MPRemoteCommandCenter.shared()
+
+        commandCenter.playCommand.addTarget { [weak self] _ in
+            self?.audioPlayer?.play()
+            self?.isAudioPlaying = true
+            self?.setNowPlayingInfo()
+            return .success
+        }
+
+        commandCenter.pauseCommand.addTarget { [weak self] _ in
+            self?.audioPlayer?.pause()
+            self?.isAudioPlaying = false
+            self?.setNowPlayingInfo()
+            return .success
+        }
+
+        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
+            self?.nextAudioButtonTapped()
+            return .success
+        }
+
+        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
+            self?.previousAudioButtonTapped()
+            return .success
+        }
+
+        // Change playback position command (scrubber)
+        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let self = self, let player = self.audioPlayer else { return .commandFailed }
+            if let event = event as? MPChangePlaybackPositionCommandEvent {
+                let newPosition = event.positionTime
+                player.currentTime = newPosition
+                self.audioSlider.value = Float(newPosition)
+                self.setNowPlayingInfo()
+                return .success
+            }
+            return .commandFailed
+        }
+    }
+
+    //MARK: Set Now Playing Info
+    private func setNowPlayingInfo() {
+        guard let audioPlayer = audioPlayer, let index = pickedAudioIndex else { return }
+        let audio = album[index]
+
+        var nowPlayingInfo = [String: Any]()
+        nowPlayingInfo[MPMediaItemPropertyTitle] = audio.title
+        nowPlayingInfo[MPMediaItemPropertyArtist] = audio.artist
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = audioPlayer.duration
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = audioPlayer.currentTime
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = audioPlayer.rate
+
+        if let image = audio.image {
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        }
+
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
 }
 
@@ -457,11 +504,10 @@ extension MediaPlayerVC: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return album.count
     }
-
 }
 
 extension MediaPlayerVC: AVAudioPlayerDelegate {
-    // This function treat behaviour of player when audio is end played
+    // This function treat behavior of player when audio is end played
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
 
         print("\(album[pickedAudioIndex ?? 0].title) Finished playing")
@@ -469,7 +515,7 @@ extension MediaPlayerVC: AVAudioPlayerDelegate {
         guard var index = self.pickedAudioIndex else { return }
 
         if index < album.count - 1 && !isShuffle && !isLoop {
-            // Daca nu e pusa redarea pe loop la un anumit audio sau nu e pornita optiunea de shuffle la album, automat pornesc urmatorul audio
+            // If loop is not activated for a specific audio or shuffle is not activated for the album, automatically play the next audio
             index += 1
             self.pickedAudioIndex = index
         } else if isLoop && !isShuffle {
@@ -479,14 +525,9 @@ extension MediaPlayerVC: AVAudioPlayerDelegate {
             getNextShuffleTrack()
         }
         else if index == album.count - 1 {
-            // Last aduio from album so start play again
+            // Last audio from album so start play again
             self.pickedAudioIndex = 0
         }
         print("Start next: \(album[pickedAudioIndex ?? 0 + 1].title)")
     }
-
 }
-
-
-
-
